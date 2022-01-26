@@ -218,6 +218,9 @@ void loop()
 
 		// Get TDS value from sensor
 		getTDSVal();
+		
+		// Get pH value from sensor
+		// insert ph function
 
 		// Print Results to Serial Monitor
 		Serial.print("TDS:");
@@ -369,3 +372,36 @@ int getMedianNum(int bArray[], int iFilterLen)
 
 	return bTemp;
 }
+
+/**
+ * Heater element function
+ */
+void controlHeater(int temperature, int userTemp)
+{
+	int lowerlimit = userTemp -2;
+	int upperlimit = userTemp +2;
+	if (upperlimit > 26.66)
+	{
+		//turn relay off
+		//alert the user
+		//display visual alarm   *maybe make a function for alarms, either together or seperate
+		//initiate speaker alarm
+	}
+	if (temperature <= lowerlimit)
+	{
+		//turn relay on
+	}
+	if (temperature >= upperlimit)
+	{
+		//turn relay off
+	}
+	if (temperature < 18.33)
+	{
+		//turn relay on
+		//alert user
+		//display visual alarm
+		//initiate speaker alarm
+	}
+	return 0;
+}
+		
