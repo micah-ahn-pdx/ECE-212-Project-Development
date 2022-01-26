@@ -22,11 +22,9 @@
 //<Includes !Start!>
 // Include extended elements
 #include "elem/XCheckbox.h"
-#include "elem/XKeyPad_Alpha.h"
+#include "elem/XProgress.h"
 #include "elem/XRingGauge.h"
 #include "elem/XTogglebtn.h"
-
-// Ensure optional features are enabled in the configuration
 //<Includes !End!>
 
 // ------------------------------------------------
@@ -50,17 +48,18 @@
 // Enumerations for pages, elements, fonts, images
 // ------------------------------------------------
 //<Enum !Start!>
-enum {E_PG_BASE,E_PG_MAIN,E_PG_POPUP1,E_PG_POPUP2,E_PG2
-      ,E_POP_KEYPAD_ALPHA};
-enum {E_DRAW_LINE2,E_DRAW_LINE3,E_ELEM_BOX1,E_ELEM_BOX2,E_ELEM_BTN2
-      ,E_ELEM_BTN3,E_ELEM_BTN4,E_ELEM_BTN6,E_ELEM_BTN7,E_ELEM_BTN8
-      ,E_ELEM_BTN9,E_ELEM_CHECK1,E_ELEM_CLOCK_TXT,E_ELEM_HEATER_TXT
-      ,E_ELEM_NEXT_TXT,E_ELEM_RINGGAUGE1,E_ELEM_RINGGAUGE2
-      ,E_ELEM_RINGGAUGE3,E_ELEM_TEAMNAME_TXT,E_ELEM_TEXT10
-      ,E_ELEM_TEXT11,E_ELEM_TEXT13,E_ELEM_TEXT14,E_ELEM_TEXT15
-      ,E_ELEM_TEXT16,E_ELEM_TEXT17,E_ELEM_TEXT2,E_ELEM_TEXT23
-      ,E_ELEM_TEXT3,E_ELEM_TEXTINPUT1,E_ELEM_TITLE_TXT,E_ELEM_TOGGLE1
-      ,E_ELEM_KEYPAD_ALPHA};
+enum {E_PG_BASE,E_PG_MAIN,E_PG_POPUP1,E_PG_POPUP2,E_PG2};
+enum {E_DRAW_LINE2,E_DRAW_LINE3,E_ELEM_BOX1,E_ELEM_BOX2,E_ELEM_BTN11
+      ,E_ELEM_BTN2,E_ELEM_BTN3,E_ELEM_BTN4,E_ELEM_BTN6,E_ELEM_BTN7
+      ,E_ELEM_BTN8,E_ELEM_BTN9,E_ELEM_CHECK1,E_ELEM_CLOCK_TXT
+      ,E_ELEM_HEATER_TXT,E_ELEM_NEXT_TXT,E_ELEM_PROGRESS1
+      ,E_ELEM_PROGRESS2,E_ELEM_PROGRESS3,E_ELEM_PROGRESS4
+      ,E_ELEM_PROGRESS5,E_ELEM_PROGRESS6,E_ELEM_PROGRESS7
+      ,E_ELEM_RINGGAUGE1,E_ELEM_RINGGAUGE2,E_ELEM_RINGGAUGE3
+      ,E_ELEM_TEAMNAME_TXT,E_ELEM_TEXT10,E_ELEM_TEXT11,E_ELEM_TEXT13
+      ,E_ELEM_TEXT14,E_ELEM_TEXT15,E_ELEM_TEXT16,E_ELEM_TEXT17
+      ,E_ELEM_TEXT2,E_ELEM_TEXT23,E_ELEM_TEXT3,E_ELEM_TITLE_TXT
+      ,E_ELEM_TOGGLE1};
 // Must use separate enum for fonts with MAX_FONT at end to use gslc_FontSet.
 enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 //<Enum !End!>
@@ -73,7 +72,7 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 // Define the maximum number of elements and pages
 // ------------------------------------------------
 //<ElementDefines !Start!>
-#define MAX_PAGE                6
+#define MAX_PAGE                5
 
 #define MAX_ELEM_PG_BASE 5 // # Elems total on page
 #define MAX_ELEM_PG_BASE_RAM MAX_ELEM_PG_BASE // # Elems in RAM
@@ -97,7 +96,7 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 #define MAX_ELEM_PG_POPUP2 3 // # Elems total on page
 #define MAX_ELEM_PG_POPUP2_RAM MAX_ELEM_PG_POPUP2 // # Elems in RAM
 
-#define MAX_ELEM_PG2 1 // # Elems total on page
+#define MAX_ELEM_PG2 8 // # Elems total on page
 #define MAX_ELEM_PG2_RAM MAX_ELEM_PG2 // # Elems in RAM
 //<ElementDefines !End!>
 
@@ -120,14 +119,18 @@ gslc_tsElem                     m_asPopup2Elem[MAX_ELEM_PG_POPUP2_RAM];
 gslc_tsElemRef                  m_asPopup2ElemRef[MAX_ELEM_PG_POPUP2];
 gslc_tsElem                     m_asPage2Elem[MAX_ELEM_PG2_RAM];
 gslc_tsElemRef                  m_asPage2ElemRef[MAX_ELEM_PG2];
-gslc_tsElem                     m_asKeypadAlphaElem[1];
-gslc_tsElemRef                  m_asKeypadAlphaElemRef[1];
-gslc_tsXKeyPad                  m_sKeyPadAlpha;
 gslc_tsXRingGauge               m_sXRingGauge1;
 gslc_tsXRingGauge               m_sXRingGauge2;
 gslc_tsXRingGauge               m_sXRingGauge3;
 gslc_tsXTogglebtn               m_asXToggle1;
 gslc_tsXCheckbox                m_asXCheck1;
+gslc_tsXProgress                m_sXBarGauge1;
+gslc_tsXProgress                m_sXBarGauge2;
+gslc_tsXProgress                m_sXBarGauge3;
+gslc_tsXProgress                m_sXBarGauge4;
+gslc_tsXProgress                m_sXBarGauge5;
+gslc_tsXProgress                m_sXBarGauge6;
+gslc_tsXProgress                m_sXBarGauge7;
 
 #define MAX_STR                 100
 
@@ -141,12 +144,18 @@ gslc_tsXCheckbox                m_asXCheck1;
 //<Extern_References !Start!>
 extern gslc_tsElemRef* btnOther;
 extern gslc_tsElemRef* btnSettings;
+extern gslc_tsElemRef* btnStngNext;
+extern gslc_tsElemRef* btnStngPrev;
 extern gslc_tsElemRef* btnSummary;
 extern gslc_tsElemRef* clockTxt;
 extern gslc_tsElemRef* heaterTxt;
-extern gslc_tsElemRef* m_pElemBtnTextButton;
-extern gslc_tsElemRef* m_pElemBtnTextButton9;
-extern gslc_tsElemRef* m_pElemInTxt1;
+extern gslc_tsElemRef* m_pElemProgress1;
+extern gslc_tsElemRef* m_pElemProgress1_2;
+extern gslc_tsElemRef* m_pElemProgress1_3;
+extern gslc_tsElemRef* m_pElemProgress1_4;
+extern gslc_tsElemRef* m_pElemProgress1_5;
+extern gslc_tsElemRef* m_pElemProgress1_6;
+extern gslc_tsElemRef* m_pElemProgress1_7;
 extern gslc_tsElemRef* nxtTxt;
 extern gslc_tsElemRef* phGauge;
 extern gslc_tsElemRef* phLoHiTxt;
@@ -159,7 +168,6 @@ extern gslc_tsElemRef* tempLoHiTxt;
 extern gslc_tsElemRef* tempUnitCB;
 extern gslc_tsElemRef* tempUnitToggle;
 extern gslc_tsElemRef* tempUnitTxt;
-extern gslc_tsElemRef* m_pElemKeyPadAlpha;
 //<Extern_References !End!>
 
 // Define debug message function
@@ -201,7 +209,6 @@ void InitGUIslice_gen()
   gslc_PageAdd(&m_gui,E_PG_POPUP1,m_asPopup1Elem,MAX_ELEM_PG_POPUP1_RAM,m_asPopup1ElemRef,MAX_ELEM_PG_POPUP1);
   gslc_PageAdd(&m_gui,E_PG_POPUP2,m_asPopup2Elem,MAX_ELEM_PG_POPUP2_RAM,m_asPopup2ElemRef,MAX_ELEM_PG_POPUP2);
   gslc_PageAdd(&m_gui,E_PG2,m_asPage2Elem,MAX_ELEM_PG2_RAM,m_asPage2ElemRef,MAX_ELEM_PG2);
-  gslc_PageAdd(&m_gui,E_POP_KEYPAD_ALPHA,m_asKeypadAlphaElem,1,m_asKeypadAlphaElemRef,1);  // KeyPad
 
   // Now mark E_PG_BASE as a "base" page which means that it's elements
   // are always visible. This is useful for common page elements.
@@ -431,7 +438,7 @@ void InitGUIslice_gen()
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
-  m_pElemBtnTextButton = pElemRef;
+  btnStngNext = pElemRef;
   
   // create E_ELEM_BTN9 button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN9,E_PG_POPUP1,
@@ -439,7 +446,7 @@ void InitGUIslice_gen()
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
-  m_pElemBtnTextButton9 = pElemRef;
+  btnStngPrev = pElemRef;
 
   // -----------------------------------
   // PAGE: E_PG_POPUP2
@@ -470,25 +477,46 @@ void InitGUIslice_gen()
   // PAGE: E_PG2
   
   
-  // Create E_ELEM_TEXTINPUT1 text input field
-  static char m_sInputText1[11] = "";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXTINPUT1,E_PG2,(gslc_tsRect){200,60,100,30},
-    (char*)m_sInputText1,11,E_BUILTIN5X8);
-  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
-  gslc_ElemSetTxtMargin(&m_gui,pElemRef,5);
-  gslc_ElemSetFrameEn(&m_gui,pElemRef,true);
-  gslc_ElemSetClickEn(&m_gui, pElemRef, true);
-  gslc_ElemSetTouchFunc(&m_gui, pElemRef, &CbBtnCommon);
-  m_pElemInTxt1 = pElemRef;
+  // create E_ELEM_BTN11 button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN11,E_PG2,
+    (gslc_tsRect){190,230,100,40},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
 
-  // -----------------------------------
-  // PAGE: E_POP_KEYPAD_ALPHA
-  
-  static gslc_tsXKeyPadCfg_Alpha sCfgTx;
-  sCfgTx = gslc_ElemXKeyPadCfgInit_Alpha();
-  m_pElemKeyPadAlpha = gslc_ElemXKeyPadCreate_Alpha(&m_gui, E_ELEM_KEYPAD_ALPHA, E_POP_KEYPAD_ALPHA,
-    &m_sKeyPadAlpha, 65, 80, E_BUILTIN5X8, &sCfgTx);
-  gslc_ElemXKeyPadValSetCb(&m_gui, m_pElemKeyPadAlpha, &CbKeypad);
+  // Create progress bar E_ELEM_PROGRESS1 
+  pElemRef = gslc_ElemXProgressCreate(&m_gui,E_ELEM_PROGRESS1,E_PG2,&m_sXBarGauge1,
+    (gslc_tsRect){23,50,12,50},0,100,50,GSLC_COL_GREEN,true);
+  m_pElemProgress1 = pElemRef;
+
+  // Create progress bar E_ELEM_PROGRESS2 
+  pElemRef = gslc_ElemXProgressCreate(&m_gui,E_ELEM_PROGRESS2,E_PG2,&m_sXBarGauge2,
+    (gslc_tsRect){143,50,12,50},0,100,0,GSLC_COL_GREEN,true);
+  m_pElemProgress1_2 = pElemRef;
+
+  // Create progress bar E_ELEM_PROGRESS3 
+  pElemRef = gslc_ElemXProgressCreate(&m_gui,E_ELEM_PROGRESS3,E_PG2,&m_sXBarGauge3,
+    (gslc_tsRect){123,50,12,50},0,100,70,GSLC_COL_GREEN,true);
+  m_pElemProgress1_3 = pElemRef;
+
+  // Create progress bar E_ELEM_PROGRESS4 
+  pElemRef = gslc_ElemXProgressCreate(&m_gui,E_ELEM_PROGRESS4,E_PG2,&m_sXBarGauge4,
+    (gslc_tsRect){103,50,12,50},0,100,0,GSLC_COL_GREEN,true);
+  m_pElemProgress1_4 = pElemRef;
+
+  // Create progress bar E_ELEM_PROGRESS5 
+  pElemRef = gslc_ElemXProgressCreate(&m_gui,E_ELEM_PROGRESS5,E_PG2,&m_sXBarGauge5,
+    (gslc_tsRect){83,50,12,50},0,100,0,GSLC_COL_GREEN,true);
+  m_pElemProgress1_5 = pElemRef;
+
+  // Create progress bar E_ELEM_PROGRESS6 
+  pElemRef = gslc_ElemXProgressCreate(&m_gui,E_ELEM_PROGRESS6,E_PG2,&m_sXBarGauge6,
+    (gslc_tsRect){63,50,12,50},0,100,30,GSLC_COL_GREEN,true);
+  m_pElemProgress1_6 = pElemRef;
+
+  // Create progress bar E_ELEM_PROGRESS7 
+  pElemRef = gslc_ElemXProgressCreate(&m_gui,E_ELEM_PROGRESS7,E_PG2,&m_sXBarGauge7,
+    (gslc_tsRect){43,50,12,50},0,100,90,GSLC_COL_GREEN,true);
+  m_pElemProgress1_7 = pElemRef;
 //<InitGUI !End!>
 
 //<Startup !Start!>

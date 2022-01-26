@@ -27,7 +27,7 @@
 #define TDS_SENSOR 25			// TDS Sensor pin
 #define VREF 3.3          // [TDS] analog reference voltage(Volt) of the ADC
 #define SCOUNT 30         // [TDS] sum of sample point
-#define FIFTEEN_MINS 15*60*1000L
+#define FIFTEEN_MINS 15*60*1000L	// 15 minutes
 #define LOOP_UPDATE_DELAY 5*1000L // 5 seconds
 
 // * Starting Variables
@@ -52,7 +52,7 @@ int analogBufferIndex = 0, copyIndex = 0;
 float averageVoltage = 0, tdsValue = 0, temperature = 0;
 
 
-// **** BELOW IS GENERATED AUTOMATICALLY BY THE GUISLICE BUILDER **** //
+// **************** BELOW IS GENERATED AUTOMATICALLY BY THE GUISLICE BUILDER **************** //
 // ------------------------------------------------
 // Program Globals
 // ------------------------------------------------
@@ -61,12 +61,18 @@ float averageVoltage = 0, tdsValue = 0, temperature = 0;
 //<Save_References !Start!>
 gslc_tsElemRef* btnOther          = NULL;
 gslc_tsElemRef* btnSettings       = NULL;
+gslc_tsElemRef* btnStngNext       = NULL;
+gslc_tsElemRef* btnStngPrev       = NULL;
 gslc_tsElemRef* btnSummary        = NULL;
 gslc_tsElemRef* clockTxt          = NULL;
 gslc_tsElemRef* heaterTxt         = NULL;
-gslc_tsElemRef* m_pElemBtnTextButton= NULL;
-gslc_tsElemRef* m_pElemBtnTextButton9= NULL;
-gslc_tsElemRef* m_pElemInTxt1     = NULL;
+gslc_tsElemRef* m_pElemProgress1  = NULL;
+gslc_tsElemRef* m_pElemProgress1_2= NULL;
+gslc_tsElemRef* m_pElemProgress1_3= NULL;
+gslc_tsElemRef* m_pElemProgress1_4= NULL;
+gslc_tsElemRef* m_pElemProgress1_5= NULL;
+gslc_tsElemRef* m_pElemProgress1_6= NULL;
+gslc_tsElemRef* m_pElemProgress1_7= NULL;
 gslc_tsElemRef* nxtTxt            = NULL;
 gslc_tsElemRef* phGauge           = NULL;
 gslc_tsElemRef* phLoHiTxt         = NULL;
@@ -79,7 +85,6 @@ gslc_tsElemRef* tempLoHiTxt       = NULL;
 gslc_tsElemRef* tempUnitCB        = NULL;
 gslc_tsElemRef* tempUnitToggle    = NULL;
 gslc_tsElemRef* tempUnitTxt       = NULL;
-gslc_tsElemRef* m_pElemKeyPadAlpha= NULL;
 //<Save_References !End!>
 
 // Define debug message function
@@ -101,6 +106,7 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
     switch (pElem->nId) {
 //<Button Enums !Start!>
       case E_ELEM_BTN2:
+        gslc_SetPageCur(&m_gui, E_PG2);
         break;
       case E_ELEM_BTN3:
         gslc_PopupShow(&m_gui, E_PG_POPUP1, true);
@@ -124,9 +130,8 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
       case E_ELEM_BTN7:
         gslc_PopupHide(&m_gui);
         break;
-      case E_ELEM_TEXTINPUT1:
-        // Clicked on edit field, so show popup box and associate with this text field
-        gslc_ElemXKeyPadInputAsk(&m_gui, m_pElemKeyPadAlpha, E_POP_KEYPAD_ALPHA, m_pElemInTxt1);
+      case E_ELEM_BTN11:
+        gslc_SetPageCur(&m_gui, E_PG_MAIN);
         break;
 //<Button Enums !End!>
       default:
@@ -137,36 +142,8 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
 }
 //<Checkbox Callback !Start!>
 //<Checkbox Callback !End!>
-// KeyPad Input Ready callback
-bool CbKeypad(void* pvGui, void *pvElemRef, int16_t nState, void* pvData)
-{
-  gslc_tsGui*     pGui     = (gslc_tsGui*)pvGui;
-  gslc_tsElemRef* pElemRef = (gslc_tsElemRef*)(pvElemRef);
-  gslc_tsElem*    pElem    = gslc_GetElemFromRef(pGui,pElemRef);
-
-  // From the pvData we can get the ID element that is ready.
-  int16_t nTargetElemId = gslc_ElemXKeyPadDataTargetIdGet(pGui, pvData);
-  if (nState == XKEYPAD_CB_STATE_DONE) {
-    // User clicked on Enter to leave popup
-    // - If we have a popup active, pass the return value directly to
-    //   the corresponding value field
-    switch (nTargetElemId) {
-//<Keypad Enums !Start!>
-      case E_ELEM_TEXTINPUT1:
-        gslc_ElemXKeyPadInputGet(pGui, m_pElemInTxt1, pvData);
-	    gslc_PopupHide(&m_gui);
-        break;
-
-//<Keypad Enums !End!>
-      default:
-        break;
-    }
-  } else if (nState == XKEYPAD_CB_STATE_CANCEL) {
-    // User escaped from popup, so don't update values
-    gslc_PopupHide(&m_gui);
-  }
-  return true;
-}
+//<Keypad Callback !Start!>
+//<Keypad Callback !End!>
 //<Spinner Callback !Start!>
 //<Spinner Callback !End!>
 //<Listbox Callback !Start!>
@@ -186,7 +163,7 @@ bool CbTickScanner(void* pvGui,void* pvScope)
 
   return true;
 }
-// **** ABOVE IS GENERATED AUTOMATICALLY BY THE GUISLICE BUILDER **** //
+// **************** ABOVE IS GENERATED AUTOMATICALLY BY THE GUISLICE BUILDER **************** //
 
 
 void setup()
@@ -200,17 +177,18 @@ void setup()
   Serial.printf("Connecting to %s ", ssid);
   WiFi.begin(ssid, pwd);
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+	delay(500);
+	Serial.print(".");
   }
   Serial.println("CONNECTED to WIFI");
 
   // Get local time from ntp server via WiFi
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+	getLocalTime(&timeinfo);
 
   // Disconnect WiFi
-  //  WiFi.disconnect(true);
-  //  WiFi.mode(WIFI_OFF);
+   WiFi.disconnect(true);
+   WiFi.mode(WIFI_OFF);
 
 	pinMode(TDS_SENSOR, INPUT); // set TDS sensor
   tempSensor.begin(); // start temp sensor
@@ -251,6 +229,8 @@ void loop()
 		Serial.print("ºC / ");
 		Serial.print(tempSensor.getTempFByIndex(0));
 		Serial.print("ºF");
+		
+		Serial.println();
 
 		} // End of update delay
 
@@ -299,7 +279,7 @@ void initialSetup()
 
 /**
  * @brief Reads data from the TDS sensor and calculates the TDS value 
- * 				and stores it in 'tdsValue' variable
+ *        and stores it in 'tdsValue' variable
  * 
  */
 void getTDSVal()
