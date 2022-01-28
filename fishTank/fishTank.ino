@@ -62,30 +62,25 @@ float averageVoltage = 0, tdsValue = 0, temperature = 0;
 //<Save_References !Start!>
 gslc_tsElemRef* btnOther          = NULL;
 gslc_tsElemRef* btnSettings       = NULL;
-gslc_tsElemRef* btnStngNext       = NULL;
-gslc_tsElemRef* btnStngPrev       = NULL;
+gslc_tsElemRef* btnStngNext13     = NULL;
+gslc_tsElemRef* btnStngPrev14     = NULL;
 gslc_tsElemRef* btnSummary        = NULL;
 gslc_tsElemRef* clockTxt          = NULL;
-gslc_tsElemRef* heaterTxt         = NULL;
-gslc_tsElemRef* m_pElemProgress1  = NULL;
-gslc_tsElemRef* m_pElemProgress1_2= NULL;
-gslc_tsElemRef* m_pElemProgress1_3= NULL;
-gslc_tsElemRef* m_pElemProgress1_4= NULL;
-gslc_tsElemRef* m_pElemProgress1_5= NULL;
-gslc_tsElemRef* m_pElemProgress1_6= NULL;
-gslc_tsElemRef* m_pElemProgress1_7= NULL;
-gslc_tsElemRef* nxtTxt            = NULL;
+gslc_tsElemRef* desiredTemp       = NULL;
 gslc_tsElemRef* phGauge           = NULL;
 gslc_tsElemRef* phLoHiTxt         = NULL;
 gslc_tsElemRef* phUnitTxt         = NULL;
+gslc_tsElemRef* statusbarText     = NULL;
 gslc_tsElemRef* tdsGauge          = NULL;
 gslc_tsElemRef* tdsLoHiTxt        = NULL;
 gslc_tsElemRef* tdsUnitTxt        = NULL;
 gslc_tsElemRef* tempGauge         = NULL;
 gslc_tsElemRef* tempLoHiTxt       = NULL;
 gslc_tsElemRef* tempUnitCB        = NULL;
-gslc_tsElemRef* tempUnitToggle    = NULL;
+gslc_tsElemRef* tempUnitToggle2   = NULL;
 gslc_tsElemRef* tempUnitTxt       = NULL;
+gslc_tsElemRef* useHeaterCB       = NULL;
+gslc_tsElemRef* m_pElemKeyPadNum  = NULL;
 //<Save_References !End!>
 
 // Define debug message function
@@ -107,32 +102,35 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
     switch (pElem->nId) {
 //<Button Enums !Start!>
       case E_ELEM_BTN2:
-        gslc_SetPageCur(&m_gui, E_PG2);
+        gslc_SetPageCur(&m_gui, E_PG_SUM);
         break;
       case E_ELEM_BTN3:
-        gslc_PopupShow(&m_gui, E_PG_POPUP1, true);
+        gslc_SetPageCur(&m_gui, E_PG_STNG);
         break;
       case E_ELEM_BTN4:
-        gslc_PopupShow(&m_gui, E_PG_POPUP2, true);
-        break;
-      case E_ELEM_TOGGLE1:
-        // TODO Add code for Toggle button ON/OFF state
-        if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle)) {
-          ;
-        }
-        break;
-      case E_ELEM_BTN6:
-        gslc_PopupHide(&m_gui);
-        break;
-      case E_ELEM_BTN8:
-        break;
-      case E_ELEM_BTN9:
         break;
       case E_ELEM_BTN7:
         gslc_PopupHide(&m_gui);
         break;
       case E_ELEM_BTN11:
         gslc_SetPageCur(&m_gui, E_PG_MAIN);
+        break;
+      case E_ELEM_TOGGLE2:
+        // TODO Add code for Toggle button ON/OFF state
+        if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle2)) {
+          ;
+        }
+        break;
+      case E_ELEM_BTN12:
+        gslc_SetPageCur(&m_gui, E_PG_MAIN);
+        break;
+      case E_ELEM_BTN13:
+        break;
+      case E_ELEM_BTN14:
+        break;
+      case E_ELEM_NUMINPUT1:
+        // Clicked on edit field, so show popup box and associate with this text field
+        gslc_ElemXKeyPadInputAsk(&m_gui, m_pElemKeyPadNum, E_POP_KEYPAD_NUM, desiredTemp);
         break;
 //<Button Enums !End!>
       default:
@@ -143,16 +141,62 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
 }
 //<Checkbox Callback !Start!>
 //<Checkbox Callback !End!>
-//<Keypad Callback !Start!>
-//<Keypad Callback !End!>
+// KeyPad Input Ready callback
+bool CbKeypad(void* pvGui, void *pvElemRef, int16_t nState, void* pvData)
+{
+  gslc_tsGui*     pGui     = (gslc_tsGui*)pvGui;
+  gslc_tsElemRef* pElemRef = (gslc_tsElemRef*)(pvElemRef);
+  gslc_tsElem*    pElem    = gslc_GetElemFromRef(pGui,pElemRef);
+
+  // From the pvData we can get the ID element that is ready.
+  int16_t nTargetElemId = gslc_ElemXKeyPadDataTargetIdGet(pGui, pvData);
+  if (nState == XKEYPAD_CB_STATE_DONE) {
+    // User clicked on Enter to leave popup
+    // - If we have a popup active, pass the return value directly to
+    //   the corresponding value field
+    switch (nTargetElemId) {
+//<Keypad Enums !Start!>
+      case E_ELEM_NUMINPUT1:
+        gslc_ElemXKeyPadInputGet(pGui, desiredTemp, pvData);
+	    gslc_PopupHide(&m_gui);
+        break;
+
+//<Keypad Enums !End!>
+      default:
+        break;
+    }
+  } else if (nState == XKEYPAD_CB_STATE_CANCEL) {
+    // User escaped from popup, so don't update values
+    gslc_PopupHide(&m_gui);
+  }
+  return true;
+}
 //<Spinner Callback !Start!>
 //<Spinner Callback !End!>
 //<Listbox Callback !Start!>
 //<Listbox Callback !End!>
 //<Draw Callback !Start!>
 //<Draw Callback !End!>
-//<Slider Callback !Start!>
-//<Slider Callback !End!>
+
+// Callback function for when a slider's position has been updated
+bool CbSlidePos(void* pvGui,void* pvElemRef,int16_t nPos)
+{
+  gslc_tsGui*     pGui     = (gslc_tsGui*)(pvGui);
+  gslc_tsElemRef* pElemRef = (gslc_tsElemRef*)(pvElemRef);
+  gslc_tsElem*    pElem    = gslc_GetElemFromRef(pGui,pElemRef);
+  int16_t         nVal;
+
+  // From the element's ID we can determine which slider was updated.
+  switch (pElem->nId) {
+//<Slider Enums !Start!>
+
+//<Slider Enums !End!>
+    default:
+      break;
+  }
+
+  return true;
+}
 
 bool CbTickScanner(void* pvGui,void* pvScope)
 {
@@ -258,6 +302,13 @@ void loop()
 
 } // End of loop
 
+
+
+
+void testSensors() 
+{
+
+}
 
 /**
  * @brief Initial setup for the device.
