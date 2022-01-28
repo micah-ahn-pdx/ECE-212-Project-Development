@@ -29,7 +29,7 @@
 #define SCOUNT 30         // [TDS] sum of sample point
 #define FIFTEEN_MINS 15*60*1000L	// 15 minutes
 #define LOOP_UPDATE_DELAY 5*1000L // 5 seconds
-const int RELAY_PIN = 13;	// Relay pin
+#define RELAY_PIN = 13;		// Relay pin
 
 // * Starting Variables
 // loop update variable
@@ -383,6 +383,7 @@ void controlHeater(int temperature, int userTemp)
 {
 	int lowerlimit = userTemp -2;
 	int upperlimit = userTemp +2;
+		// Set pin to HIGH to turn on - Set pin to LOW to turn off
 	if (upperlimit > 26.66)
 	{
 		digitalWrite(RELAY_PIN, LOW);
