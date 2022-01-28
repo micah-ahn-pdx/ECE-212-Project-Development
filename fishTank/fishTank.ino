@@ -29,6 +29,7 @@
 #define SCOUNT 30         // [TDS] sum of sample point
 #define FIFTEEN_MINS 15*60*1000L	// 15 minutes
 #define LOOP_UPDATE_DELAY 5*1000L // 5 seconds
+const int RELAY_PIN = 13;	// Relay pin
 
 // * Starting Variables
 // loop update variable
@@ -200,6 +201,8 @@ void setup()
 	// Initial Setup
   initialSetup();
 
+	// Initialize Relay pin as an output
+	pinMode(RELAY_PIN, OUTPUT);
 }
 
 // -----------------------------------
@@ -387,13 +390,13 @@ void controlHeater(int temperature, int userTemp)
 		//display visual alarm   *maybe make a function for alarms, either together or seperate
 		//initiate speaker alarm
 	}
-	if (temperature <= lowerlimit)
+	if (temperature <= lowerLimit)
 	{
-		//turn relay on
+		digitalWrite(RELAY_PIN, HIGH);
 	}
-	if (temperature >= upperlimit)
+	if (temperature >= upperLimit)
 	{
-		//turn relay off
+		digitalWrite(RELAY_PIN, LOW);
 	}
 	if (temperature < 18.33)
 	{
