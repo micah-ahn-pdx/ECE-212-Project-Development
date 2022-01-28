@@ -385,7 +385,7 @@ void controlHeater(int temperature, int userTemp)
 	int upperlimit = userTemp +2;
 	if (upperlimit > 26.66)
 	{
-		//turn relay off
+		digitalWrite(RELAY_PIN, LOW);
 		//alert the user
 		//display visual alarm   *maybe make a function for alarms, either together or seperate
 		//initiate speaker alarm
@@ -400,7 +400,7 @@ void controlHeater(int temperature, int userTemp)
 	}
 	if (temperature < 18.33)
 	{
-		//turn relay on
+		digitalWrite(RELAY_PIN, HIGH);
 		//alert user
 		//display visual alarm
 		//initiate speaker alarm
