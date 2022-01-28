@@ -52,15 +52,16 @@
 //<Enum !Start!>
 enum {E_PG_BASE,E_PG_MAIN,E_PG_POPUP_NOTIFY,E_PG_SUM,E_PG_STNG
       ,E_POP_KEYPAD_NUM};
-enum {E_DRAW_LINE4,E_DRAW_LINE5,E_ELEM_BOX2,E_ELEM_BTN11,E_ELEM_BTN12
-      ,E_ELEM_BTN13,E_ELEM_BTN14,E_ELEM_BTN2,E_ELEM_BTN3,E_ELEM_BTN4
-      ,E_ELEM_BTN7,E_ELEM_CHECK2,E_ELEM_CHECK3,E_ELEM_CLOCK_TXT
+enum {E_DRAW_LINE4,E_DRAW_LINE5,E_ELEM_BOX2,E_ELEM_BTN13,E_ELEM_BTN14
+      ,E_ELEM_BTN2,E_ELEM_BTN4,E_ELEM_BTN7,E_ELEM_BTN_HOME1
+      ,E_ELEM_BTN_HOME2,E_ELEM_BTN_STNGS,E_ELEM_CHECK2,E_ELEM_CLOCK_TXT
       ,E_ELEM_NUMINPUT1,E_ELEM_PHGAUGE,E_ELEM_PHUNIT_TEXT
       ,E_ELEM_TDSGAUGE,E_ELEM_TDSUNIT_TEXT,E_ELEM_TEAMNAME_TXT
       ,E_ELEM_TEMPGAUGE,E_ELEM_TEMPUNIT_TEXT,E_ELEM_TEXT11
       ,E_ELEM_TEXT14,E_ELEM_TEXT17,E_ELEM_TEXT24,E_ELEM_TEXT25
-      ,E_ELEM_TEXT26,E_ELEM_TEXT27,E_ELEM_TEXT28,E_ELEM_TEXT3
-      ,E_ELEM_TITLE_TXT,E_ELEM_TOGGLE2,E_ELEM_KEYPAD_NUM};
+      ,E_ELEM_TEXT26,E_ELEM_TEXT27,E_ELEM_TEXT28,E_ELEM_TEXT29
+      ,E_ELEM_TEXT3,E_ELEM_TEXT30,E_ELEM_TEXT31,E_ELEM_TITLE_TXT
+      ,E_ELEM_TOGGLE2,E_ELEM_KEYPAD_NUM};
 // Must use separate enum for fonts with MAX_FONT at end to use gslc_FontSet.
 enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 //<Enum !End!>
@@ -97,7 +98,7 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 #define MAX_ELEM_PG_SUM 3 // # Elems total on page
 #define MAX_ELEM_PG_SUM_RAM MAX_ELEM_PG_SUM // # Elems in RAM
 
-#define MAX_ELEM_PG_STNG 12 // # Elems total on page
+#define MAX_ELEM_PG_STNG 14 // # Elems total on page
 #define MAX_ELEM_PG_STNG_RAM MAX_ELEM_PG_STNG // # Elems in RAM
 //<ElementDefines !End!>
 
@@ -128,7 +129,6 @@ gslc_tsXRingGauge               m_sXRingGauge2;
 gslc_tsXRingGauge               m_sXRingGauge3;
 gslc_tsXTogglebtn               m_asXToggle2;
 gslc_tsXCheckbox                m_asXCheck2;
-gslc_tsXCheckbox                m_asXCheck3;
 
 #define MAX_STR                 100
 
@@ -147,19 +147,19 @@ extern gslc_tsElemRef* btnStngPrev14;
 extern gslc_tsElemRef* btnSummary;
 extern gslc_tsElemRef* clockTxt;
 extern gslc_tsElemRef* desiredTemp;
+extern gslc_tsElemRef* noHeaterCB;
 extern gslc_tsElemRef* phGauge;
 extern gslc_tsElemRef* phLoHiTxt;
 extern gslc_tsElemRef* phUnitTxt;
+extern gslc_tsElemRef* settingsTempUnitTxt;
 extern gslc_tsElemRef* statusbarText;
 extern gslc_tsElemRef* tdsGauge;
 extern gslc_tsElemRef* tdsLoHiTxt;
 extern gslc_tsElemRef* tdsUnitTxt;
 extern gslc_tsElemRef* tempGauge;
 extern gslc_tsElemRef* tempLoHiTxt;
-extern gslc_tsElemRef* tempUnitCB;
-extern gslc_tsElemRef* tempUnitToggle2;
+extern gslc_tsElemRef* tempUnitToggle;
 extern gslc_tsElemRef* tempUnitTxt;
-extern gslc_tsElemRef* useHeaterCB;
 extern gslc_tsElemRef* m_pElemKeyPadNum;
 //<Extern_References !End!>
 
@@ -285,9 +285,9 @@ void InitGUIslice_gen()
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
   btnSummary = pElemRef;
   
-  // Create E_ELEM_BTN3 button with modifiable text label
+  // Create E_ELEM_BTN_STNGS button with modifiable text label
   static char m_strbtn3[11] = "Options";
-  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN3,E_PG_MAIN,
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_STNGS,E_PG_MAIN,
     (gslc_tsRect){310,240,100,40},
     (char*)m_strbtn3,11,E_BUILTIN5X8,&CbBtnCommon);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
@@ -395,8 +395,8 @@ void InitGUIslice_gen()
   // PAGE: E_PG_SUM
   
   
-  // create E_ELEM_BTN11 button with text label
-  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN11,E_PG_SUM,
+  // create E_ELEM_BTN_HOME1 button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_HOME1,E_PG_SUM,
     (gslc_tsRect){190,260,100,40},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
@@ -418,39 +418,39 @@ void InitGUIslice_gen()
   
   
   // Create E_ELEM_TEXT26 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT26,E_PG_STNG,(gslc_tsRect){90,50,139,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT26,E_PG_STNG,(gslc_tsRect){50,50,139,10},
     (char*)"Set Desired Temperature",0,E_BUILTIN5X8);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   
   // Create toggle button E_ELEM_TOGGLE2
   pElemRef = gslc_ElemXTogglebtnCreate(&m_gui,E_ELEM_TOGGLE2,E_PG_STNG,&m_asXToggle2,
-    (gslc_tsRect){215,200,49,25},GSLC_COL_WHITE,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY_DK3,
-    true,false,&CbBtnCommon);
-  tempUnitToggle2 = pElemRef;
+    (gslc_tsRect){349,140,49,25},GSLC_COL_WHITE,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY_DK3,
+    true,true,&CbBtnCommon);
+  tempUnitToggle = pElemRef;
   
-  // create E_ELEM_BTN12 button with text label
-  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN12,E_PG_STNG,
+  // create E_ELEM_BTN_HOME2 button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_HOME2,E_PG_STNG,
     (gslc_tsRect){190,260,100,40},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
    
   // create checkbox E_ELEM_CHECK2
   pElemRef = gslc_ElemXCheckboxCreate(&m_gui,E_ELEM_CHECK2,E_PG_STNG,&m_asXCheck2,
-    (gslc_tsRect){350,90,30,30},false,GSLCX_CHECKBOX_STYLE_ROUND,GSLC_COL_BLUE_LT4,true);
+    (gslc_tsRect){360,90,30,30},false,GSLCX_CHECKBOX_STYLE_ROUND,GSLC_COL_BLUE_LT4,false);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_GRAY_DK1,GSLC_COL_BLACK,GSLC_COL_BLACK);
-  useHeaterCB = pElemRef;
+  noHeaterCB = pElemRef;
   
   // Create E_ELEM_TEXT27 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT27,E_PG_STNG,(gslc_tsRect){90,100,217,10},
-    (char*)"Enable Heater To Reach Desired Temp.",0,E_BUILTIN5X8);
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT27,E_PG_STNG,(gslc_tsRect){50,100,205,10},
+    (char*)"Override Heater (Turns Heater Off)",0,E_BUILTIN5X8);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
 
   // Create E_DRAW_LINE4 line 
-  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE4,E_PG_STNG,80,80,400,80);
+  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE4,E_PG_STNG,40,80,440,80);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_GRAY_DK2,GSLC_COL_GRAY_DK2);
 
   // Create E_DRAW_LINE5 line 
-  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE5,E_PG_STNG,80,130,400,130);
+  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE5,E_PG_STNG,40,130,440,130);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_GRAY_DK2,GSLC_COL_GRAY_DK2);
   
   // create E_ELEM_BTN13 button with text label
@@ -471,11 +471,11 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_NUMINPUT1 numeric input field
   static char m_sInputNumber1[3] = "00";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_NUMINPUT1,E_PG_STNG,(gslc_tsRect){350,40,30,30},
-    (char*)m_sInputNumber1,3,E_BUILTIN5X8);
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_NUMINPUT1,E_PG_STNG,(gslc_tsRect){350,40,50,30},
+    (char*)m_sInputNumber1,3,E_BUILTIN10X16);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,5);
-  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_GRAY_LT3);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_GRAY_DK1,GSLC_COL_BLACK,GSLC_COL_BLACK);
   gslc_ElemSetFillEn(&m_gui,pElemRef,false);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,true);
@@ -483,17 +483,29 @@ void InitGUIslice_gen()
   gslc_ElemSetTouchFunc(&m_gui, pElemRef, &CbBtnCommon);
   desiredTemp = pElemRef;
   gslc_ElemSetTxtEnc(&m_gui,pElemRef,GSLC_TXT_ENC_UTF8);
-   
-  // create checkbox E_ELEM_CHECK3
-  pElemRef = gslc_ElemXCheckboxCreate(&m_gui,E_ELEM_CHECK3,E_PG_STNG,&m_asXCheck3,
-    (gslc_tsRect){350,140,30,30},false,GSLCX_CHECKBOX_STYLE_ROUND,GSLC_COL_BLUE_LT4,false);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_GRAY_DK1,GSLC_COL_BLACK,GSLC_COL_BLACK);
-  tempUnitCB = pElemRef;
   
   // Create E_ELEM_TEXT28 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT28,E_PG_STNG,(gslc_tsRect){90,150,199,10},
-    (char*)"Use Celsius Instead of Fahrenheit",0,E_BUILTIN5X8);
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT28,E_PG_STNG,(gslc_tsRect){50,150,121,10},
+    (char*)"Set Temperature Unit",0,E_BUILTIN5X8);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT29 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT29,E_PG_STNG,(gslc_tsRect){408,143,37,18},
+    (char*)"\xf7\F",0,E_BUILTIN10X16);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT30 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT30,E_PG_STNG,(gslc_tsRect){302,143,37,18},
+    (char*)"\xf7\C",0,E_BUILTIN10X16);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_RIGHT);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT31 runtime modifiable text
+  static char m_sDisplayText31[4] = "\xf7F";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT31,E_PG_STNG,(gslc_tsRect){405,45,37,18},
+    (char*)m_sDisplayText31,4,E_BUILTIN10X16);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  settingsTempUnitTxt = pElemRef;
 
   // -----------------------------------
   // PAGE: E_POP_KEYPAD_NUM

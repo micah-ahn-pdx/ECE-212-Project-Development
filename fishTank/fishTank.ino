@@ -23,13 +23,14 @@
 #include <DallasTemperature.h>
 
 // * 
-#define TEMP_SENSOR 4			// Temp sensor pin
-#define TDS_SENSOR 25			// TDS Sensor pin
-#define VREF 3.3          // [TDS] analog reference voltage(Volt) of the ADC
-#define SCOUNT 30         // [TDS] sum of sample point
-#define FIFTEEN_MINS 15*60*1000L	// 15 minutes
-#define LOOP_UPDATE_DELAY 5*1000L // 5 seconds
-#define RELAY_PIN = 13;		// Relay pin
+#define RELAY_PIN   13	  	// Relay pin
+#define TEMP_SENSOR 4			  // Temp sensor pin
+#define TDS_SENSOR  25			// TDS Sensor pin
+
+#define VREF        3.3     // [TDS] analog reference voltage(Volt) of the ADC
+#define SCOUNT      30      // [TDS] sum of sample point
+#define ONE_HOUR            60*60*1000L	    // 1 Hour
+#define LOOP_UPDATE_DELAY   5*1000L         // 5 Seconds
 
 // * Starting Variables
 // loop update variable
@@ -39,18 +40,18 @@ const char* ssid = "01001101";
 const char* pwd = "0x01001101";
 // Getting Time
 const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = -28800;   //Replace with your GMT offset (seconds)
-const int   daylightOffset_sec = 3600;  //Replace with your daylight offset (seconds)
+const long  gmtOffset_sec = -28800;   // GMT offset (seconds)
+const int   daylightOffset_sec = 3600;  // daylight offset (seconds)
 struct tm timeinfo;
 // Temp
-char tempUnit[3] = "F";
 OneWire oneWire(TEMP_SENSOR);
 DallasTemperature tempSensor(&oneWire);
+float tempC = 0, tempLo = 999, tempHi = -999; // Where to store current temperature
 // TDS
 int analogBuffer[SCOUNT]; 			// store the analog value in the array, read from ADC
 int analogBufferTemp[SCOUNT];
 int analogBufferIndex = 0, copyIndex = 0;
-float averageVoltage = 0, tdsValue = 0, temperature = 0;
+float averageVoltage = 0, tdsValue = 0, tdsLo = 999, tdsHi = -999;
 
 
 // **************** BELOW IS GENERATED AUTOMATICALLY BY THE GUISLICE BUILDER **************** //
@@ -67,19 +68,19 @@ gslc_tsElemRef* btnStngPrev14     = NULL;
 gslc_tsElemRef* btnSummary        = NULL;
 gslc_tsElemRef* clockTxt          = NULL;
 gslc_tsElemRef* desiredTemp       = NULL;
+gslc_tsElemRef* noHeaterCB        = NULL;
 gslc_tsElemRef* phGauge           = NULL;
 gslc_tsElemRef* phLoHiTxt         = NULL;
 gslc_tsElemRef* phUnitTxt         = NULL;
+gslc_tsElemRef* settingsTempUnitTxt= NULL;
 gslc_tsElemRef* statusbarText     = NULL;
 gslc_tsElemRef* tdsGauge          = NULL;
 gslc_tsElemRef* tdsLoHiTxt        = NULL;
 gslc_tsElemRef* tdsUnitTxt        = NULL;
 gslc_tsElemRef* tempGauge         = NULL;
 gslc_tsElemRef* tempLoHiTxt       = NULL;
-gslc_tsElemRef* tempUnitCB        = NULL;
-gslc_tsElemRef* tempUnitToggle2   = NULL;
+gslc_tsElemRef* tempUnitToggle    = NULL;
 gslc_tsElemRef* tempUnitTxt       = NULL;
-gslc_tsElemRef* useHeaterCB       = NULL;
 gslc_tsElemRef* m_pElemKeyPadNum  = NULL;
 //<Save_References !End!>
 
@@ -102,9 +103,11 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
     switch (pElem->nId) {
 //<Button Enums !Start!>
       case E_ELEM_BTN2:
+        gslc_ElemSetTxtStr(&m_gui, statusbarText, "Summary");
         gslc_SetPageCur(&m_gui, E_PG_SUM);
         break;
-      case E_ELEM_BTN3:
+      case E_ELEM_BTN_STNGS:
+        gslc_ElemSetTxtStr(&m_gui, statusbarText, "Settings");
         gslc_SetPageCur(&m_gui, E_PG_STNG);
         break;
       case E_ELEM_BTN4:
@@ -112,16 +115,15 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
       case E_ELEM_BTN7:
         gslc_PopupHide(&m_gui);
         break;
-      case E_ELEM_BTN11:
+      case E_ELEM_BTN_HOME1:
+        gslc_ElemSetTxtStr(&m_gui, statusbarText, "Home");
         gslc_SetPageCur(&m_gui, E_PG_MAIN);
         break;
       case E_ELEM_TOGGLE2:
-        // TODO Add code for Toggle button ON/OFF state
-        if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle2)) {
-          ;
-        }
+        handleTempUnitToggle();
         break;
-      case E_ELEM_BTN12:
+      case E_ELEM_BTN_HOME2:
+        gslc_ElemSetTxtStr(&m_gui, statusbarText, "Home");
         gslc_SetPageCur(&m_gui, E_PG_MAIN);
         break;
       case E_ELEM_BTN13:
@@ -255,45 +257,34 @@ void setup()
 void loop()
 {
 
-	if (millis() - loopTime >= LOOP_UPDATE_DELAY) // Update what's inside every 5 seconds without interrupting the GUI from updating
+	if (millis() - loopTime >= LOOP_UPDATE_DELAY) // Update what's inside every 5 seconds (without interrupting the GUI from updating).
 	{
 		loopTime += LOOP_UPDATE_DELAY; // Update loopTime
 
-		// Get temp from temp sensor
+    // main sensors func
+    testSensors();
+
+
+    // * Debug stuff: 
+		// Get temp
 		tempSensor.requestTemperatures();
-		float temperature = tempSensor.getTempCByIndex(0);
-
-		// Get TDS value from sensor
+		tempC = tempSensor.getTempCByIndex(0);
 		getTDSVal();
-		
-		// Get pH value from sensor
-		// insert ph function
-
 		// Print Results to Serial Monitor
 		Serial.print("TDS:");
 		Serial.print(tdsValue, 0);
 		Serial.print("ppm // ");
-
 		Serial.print("Temperature: ");
-		Serial.print(temperature);
-		Serial.print("ºC / ");
-		Serial.print(tempSensor.getTempFByIndex(0));
-		Serial.print("ºF");
+		Serial.print(tempC);
+		Serial.println("ºC");
 		
-		Serial.println();
-
-		} // End of update delay
+		} // End of 5sec update delay
 
 		// Get current time and print it on screen
 		getLocalTime(&timeinfo); // Update time
 		char clock[26];
 		strftime(clock, 26, "%H:%M:%S %m/%d/%y", &timeinfo); // Format time
-		gslc_ElemSetTxtStr(&m_gui, clockTxt, clock);				 // Update sreen text
-
-		// Set the ring meter's values (TODO: change to get the values from the sensors)
-		updateGauge(tempGauge, tempLoHiTxt, 80, 77, 81);
-		updateGauge(tdsGauge, tdsLoHiTxt, 302, 299, 304);
-		updateGauge(phGauge, phLoHiTxt, 62.2, 59, 64);
+		gslc_ElemSetTxtStr(&m_gui, clockTxt, clock);				 // Update sreen text		
 
 		// ------------------------------------------------
 		// Periodically call GUIslice update function
@@ -304,9 +295,40 @@ void loop()
 
 
 
-
+/**
+ * @brief Reads the data from the sensors and updates the GUI accordingly
+ * 
+ */
 void testSensors() 
 {
+
+  // * Temperature
+  tempSensor.requestTemperatures();
+	tempC = tempSensor.getTempCByIndex(0);
+
+  if (tempC < tempLo) tempLo = tempC;
+  if (tempC > tempHi) tempHi = tempC;
+  
+  if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle))
+  { // display temp in F
+    updateGauge(tempGauge, tempLoHiTxt, tempSensor.toFahrenheit(tempC), tempSensor.toFahrenheit(tempLo), tempSensor.toFahrenheit(tempHi));
+  } else 
+  { // display temp in C
+    updateGauge(tempGauge, tempLoHiTxt, tempC, tempLo, tempHi);
+  }
+
+
+  // * TDS
+  getTDSVal(); // Updates 'tdsValue' variable
+  if (tdsValue < tdsLo && tdsValue > 0) tdsLo = tdsValue;
+  if (tdsValue > tdsHi) tdsHi = tdsValue;
+  updateGauge(tdsGauge, tdsLoHiTxt, tdsValue, tdsLo, tdsHi); // Update GUI with the values
+
+
+  // * pH
+  // TODO: implement pH update function & display results on screen
+  updateGauge(phGauge, phLoHiTxt, 23, 20, 24);
+  
 
 }
 
@@ -315,7 +337,7 @@ void testSensors()
  * 
  */
 void initialSetup()
-{
+{  
 
 	// Set the ring's value text color, font and the ring's min and max values for each ring.
 	setTxtStyle(tempGauge, GSLC_COL_WHITE, E_BUILTIN15X24);
@@ -328,11 +350,13 @@ void initialSetup()
 	// Set each ring's unit text
 	gslc_ElemSetTxtStr(&m_gui, tdsUnitTxt, "ppm");
 	gslc_ElemSetTxtStr(&m_gui, phUnitTxt, "pH");
-	snprintf(tempUnit, 10, "%cF", 247);
-	gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, tempUnit);
+	gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char*)"\xf7""F");
+  gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char*)"\xf7""F");
 
+  testSensors();
 
 }
+
 
 /**
  * @brief Reads data from the TDS sensor and calculates the TDS value 
@@ -357,11 +381,12 @@ void getTDSVal()
 		for (copyIndex = 0; copyIndex < SCOUNT; copyIndex++)
 			analogBufferTemp[copyIndex] = analogBuffer[copyIndex];
 		averageVoltage = getMedianNum(analogBufferTemp, SCOUNT) * (float)VREF / 1024.0;																																																	 // read the analog value more stable by the median filtering algorithm, and convert to voltage value
-		float compensationCoefficient = 1.0 + 0.02 * (temperature - 25.0);																																																							 //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
+		float compensationCoefficient = 1.0 + 0.02 * (tempSensor.getTempCByIndex(0) - 25.0);																																																							 //temperature compensation formula: fFinalResult(25^C) = fFinalResult(current)/(1.0+0.02*(fTP-25.0));
 		float compensationVolatge = averageVoltage / compensationCoefficient;																																																						 //temperature compensation
 		tdsValue = (133.42 * compensationVolatge * compensationVolatge * compensationVolatge - 255.86 * compensationVolatge * compensationVolatge + 857.39 * compensationVolatge) * 0.5; //convert voltage value to tds value
 	}
 }
+
 
 /**
  * @brief Set the element's text color and font
@@ -377,6 +402,7 @@ void setTxtStyle(gslc_tsElemRef *pElemRef, gslc_tsColor colVal, int nFontId)
 	gslc_ElemUpdateFont(&m_gui, pElemRef, nFontId);
 }
 
+
 /**
  * @brief Updates ring meter's value (along with low/high values) and update the GUI
  * 
@@ -389,7 +415,7 @@ void setTxtStyle(gslc_tsElemRef *pElemRef, gslc_tsColor colVal, int nFontId)
 void updateGauge(gslc_tsElemRef *pElemRef, gslc_tsElemRef *pSubElemRef, int n, int lo, int hi)
 {
 
-	char nStr[5], loHi[10];
+	char nStr[25], loHi[25];
 	sprintf(nStr, "%d", n);
 	sprintf(loHi, "%c%d %c%d", 25, lo, 24, hi);
 
@@ -398,8 +424,10 @@ void updateGauge(gslc_tsElemRef *pElemRef, gslc_tsElemRef *pSubElemRef, int n, i
 	gslc_ElemSetTxtStr(&m_gui, pSubElemRef, loHi);
 }
 
+
 /**
  * @brief getTDSVal helper function
+ * 
  */
 int getMedianNum(int bArray[], int iFilterLen)
 {
@@ -427,15 +455,16 @@ int getMedianNum(int bArray[], int iFilterLen)
 	return bTemp;
 }
 
+
 /**
  * Heater element function
  */
 void controlHeater(int temperature, int userTemp)
 {
-	int lowerlimit = userTemp -2;
-	int upperlimit = userTemp +2;
+	int lowerLimit = userTemp -2;
+	int upperLimit = userTemp +2;
 		// Set pin to HIGH to turn on - Set pin to LOW to turn off
-	if (upperlimit > 26.66)
+	if (upperLimit > 26.66)
 	{
 		digitalWrite(RELAY_PIN, LOW);
 		//alert the user
@@ -457,6 +486,25 @@ void controlHeater(int temperature, int userTemp)
 		//display visual alarm
 		//initiate speaker alarm
 	}
-	return 0;
 }
-		
+
+
+/**
+ * @brief Handles switching between temperature units
+ * 
+ */
+void handleTempUnitToggle()
+{
+  if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle))
+  { // use F
+    gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char *)"\xf7""F");
+    gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char *)"\xf7""F");
+  }
+  else
+  { // use C
+    gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char *)"\xf7""C");
+    gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char *)"\xf7""C");
+  }
+
+  testSensors();
+}
