@@ -320,9 +320,12 @@ void testSensors()
 
   // * TDS
   getTDSVal(); // Updates 'tdsValue' variable
-  if (tdsValue < tdsLo && tdsValue > 0) tdsLo = tdsValue;
+  if (tdsValue < tdsLo && tdsValue >= 0) tdsLo = tdsValue;
   if (tdsValue > tdsHi) tdsHi = tdsValue;
-  updateGauge(tdsGauge, tdsLoHiTxt, tdsValue, tdsLo, tdsHi); // Update GUI with the values
+  
+  if (tdsValue <= 0) updateGauge(tdsGauge, tdsLoHiTxt, -1, tdsLo, tdsHi);
+  else updateGauge(tdsGauge, tdsLoHiTxt, tdsValue, tdsLo, tdsHi);
+  
 
 
   // * pH
@@ -414,7 +417,6 @@ void setTxtStyle(gslc_tsElemRef *pElemRef, gslc_tsColor colVal, int nFontId)
  */
 void updateGauge(gslc_tsElemRef *pElemRef, gslc_tsElemRef *pSubElemRef, int n, int lo, int hi)
 {
-
 	char nStr[25], loHi[25];
 	sprintf(nStr, "%d", n);
 	sprintf(loHi, "%c%d %c%d", 25, lo, 24, hi);
@@ -422,6 +424,67 @@ void updateGauge(gslc_tsElemRef *pElemRef, gslc_tsElemRef *pSubElemRef, int n, i
 	gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, n);
 	gslc_ElemSetTxtStr(&m_gui, pElemRef, nStr);
 	gslc_ElemSetTxtStr(&m_gui, pSubElemRef, loHi);
+
+  if (n <= 0) gslc_ElemSetTxtStr(&m_gui, pElemRef, "-");
+}
+
+
+/**
+ * Heater element function
+ * 
+ */
+void controlHeater(int temperature, int userTemp)
+{
+	int lowerLimit = userTemp -2;
+	int upperLimit = userTemp +2;
+		// Set pin to HIGH to turn on - Set pin to LOW to turn off
+	if (upperLimit > 26.66)
+	{
+    // Turn heater off
+		digitalWrite(RELAY_PIN, LOW);
+		//alert the user
+		//display visual alarm   *maybe make a function for alarms, either together or seperate
+		//initiate speaker alarm
+	}
+	if (temperature <= lowerLimit)
+	{
+    // Turn heater on
+		digitalWrite(RELAY_PIN, HIGH);
+	}
+	if (temperature >= upperLimit)
+	{
+    // Turn heater off
+		digitalWrite(RELAY_PIN, LOW);
+	}
+	if (temperature < 18.33)
+	{
+    // Turn heater on
+		digitalWrite(RELAY_PIN, HIGH);
+		//alert user
+		//display visual alarm
+		//initiate speaker alarm
+	}
+}
+
+
+/**
+ * @brief Handles switching between temperature units
+ * 
+ */
+void handleTempUnitToggle()
+{
+  if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle))
+  { // use F
+    gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char *)"\xf7""F");
+    gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char *)"\xf7""F");
+  }
+  else
+  { // use C
+    gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char *)"\xf7""C");
+    gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char *)"\xf7""C");
+  }
+
+  testSensors();
 }
 
 
@@ -453,58 +516,4 @@ int getMedianNum(int bArray[], int iFilterLen)
 		bTemp = (bTab[iFilterLen / 2] + bTab[iFilterLen / 2 - 1]) / 2;
 
 	return bTemp;
-}
-
-
-/**
- * Heater element function
- */
-void controlHeater(int temperature, int userTemp)
-{
-	int lowerLimit = userTemp -2;
-	int upperLimit = userTemp +2;
-		// Set pin to HIGH to turn on - Set pin to LOW to turn off
-	if (upperLimit > 26.66)
-	{
-		digitalWrite(RELAY_PIN, LOW);
-		//alert the user
-		//display visual alarm   *maybe make a function for alarms, either together or seperate
-		//initiate speaker alarm
-	}
-	if (temperature <= lowerLimit)
-	{
-		digitalWrite(RELAY_PIN, HIGH);
-	}
-	if (temperature >= upperLimit)
-	{
-		digitalWrite(RELAY_PIN, LOW);
-	}
-	if (temperature < 18.33)
-	{
-		digitalWrite(RELAY_PIN, HIGH);
-		//alert user
-		//display visual alarm
-		//initiate speaker alarm
-	}
-}
-
-
-/**
- * @brief Handles switching between temperature units
- * 
- */
-void handleTempUnitToggle()
-{
-  if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle))
-  { // use F
-    gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char *)"\xf7""F");
-    gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char *)"\xf7""F");
-  }
-  else
-  { // use C
-    gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char *)"\xf7""C");
-    gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char *)"\xf7""C");
-  }
-
-  testSensors();
 }
