@@ -58,10 +58,9 @@ enum {E_DRAW_LINE4,E_DRAW_LINE5,E_ELEM_BOX2,E_ELEM_BTN13,E_ELEM_BTN14
       ,E_ELEM_NUMINPUT1,E_ELEM_PHGAUGE,E_ELEM_PHUNIT_TEXT
       ,E_ELEM_TDSGAUGE,E_ELEM_TDSUNIT_TEXT,E_ELEM_TEAMNAME_TXT
       ,E_ELEM_TEMPGAUGE,E_ELEM_TEMPUNIT_TEXT,E_ELEM_TEXT11
-      ,E_ELEM_TEXT14,E_ELEM_TEXT17,E_ELEM_TEXT24,E_ELEM_TEXT25
-      ,E_ELEM_TEXT26,E_ELEM_TEXT27,E_ELEM_TEXT28,E_ELEM_TEXT29
-      ,E_ELEM_TEXT3,E_ELEM_TEXT30,E_ELEM_TEXT31,E_ELEM_TITLE_TXT
-      ,E_ELEM_TOGGLE2,E_ELEM_KEYPAD_NUM};
+      ,E_ELEM_TEXT14,E_ELEM_TEXT17,E_ELEM_TEXT26,E_ELEM_TEXT27
+      ,E_ELEM_TEXT28,E_ELEM_TEXT29,E_ELEM_TEXT3,E_ELEM_TEXT30
+      ,E_ELEM_TEXT31,E_ELEM_TITLE_TXT,E_ELEM_TOGGLE2,E_ELEM_KEYPAD_NUM};
 // Must use separate enum for fonts with MAX_FONT at end to use gslc_FontSet.
 enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 //<Enum !End!>
@@ -95,7 +94,7 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 #define MAX_ELEM_PG_POPUP_NOTIFY 3 // # Elems total on page
 #define MAX_ELEM_PG_POPUP_NOTIFY_RAM MAX_ELEM_PG_POPUP_NOTIFY // # Elems in RAM
 
-#define MAX_ELEM_PG_SUM 3 // # Elems total on page
+#define MAX_ELEM_PG_SUM 1 // # Elems total on page
 #define MAX_ELEM_PG_SUM_RAM MAX_ELEM_PG_SUM // # Elems in RAM
 
 #define MAX_ELEM_PG_STNG 14 // # Elems total on page
@@ -346,7 +345,7 @@ void InitGUIslice_gen()
   gslc_ElemXRingGaugeSetThickness(&m_gui,pElemRef, 15);
   gslc_ElemXRingGaugeSetAngleRange(&m_gui,pElemRef, -135, 270, true);
   gslc_ElemXRingGaugeSetColorActiveGradient(&m_gui, pElemRef, GSLC_COL_BLUE_LT4, GSLC_COL_RED_LT4);
-  gslc_ElemXRingGaugeSetColorInactive(&m_gui,pElemRef, ((gslc_tsColor){20,20,15}));
+  gslc_ElemXRingGaugeSetColorInactive(&m_gui,pElemRef, ((gslc_tsColor){20,20,20}));
   tdsGauge = pElemRef;
   
   // Create E_ELEM_TDSUNIT_TEXT modifiable text using flash API
@@ -397,21 +396,10 @@ void InitGUIslice_gen()
   
   // create E_ELEM_BTN_HOME1 button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_HOME1,E_PG_SUM,
-    (gslc_tsRect){190,260,100,40},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+    (gslc_tsRect){190,270,100,40},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
-  
-  // Create E_ELEM_TEXT24 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT24,E_PG_SUM,(gslc_tsRect){10,30,133,18},
-    (char*)"Temperature",0,E_BUILTIN10X16);
-  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
-  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
-  
-  // Create E_ELEM_TEXT25 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT25,E_PG_SUM,(gslc_tsRect){10,50,85,18},
-    (char*)"Summary",0,E_BUILTIN10X16);
-  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
-  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
 
   // -----------------------------------
   // PAGE: E_PG_STNG
@@ -431,8 +419,9 @@ void InitGUIslice_gen()
   // create E_ELEM_BTN_HOME2 button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_HOME2,E_PG_STNG,
     (gslc_tsRect){190,260,100,40},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
    
   // create checkbox E_ELEM_CHECK2
   pElemRef = gslc_ElemXCheckboxCreate(&m_gui,E_ELEM_CHECK2,E_PG_STNG,&m_asXCheck2,

@@ -17,7 +17,9 @@
 // Headers to include
 // ------------------------------------------------
 #include "fishTank_GSLC.h"
+#include <Arduino.h>
 #include <WiFi.h>
+#include <ESP_Mail_Client.h>
 #include "time.h"
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -63,6 +65,14 @@ int analogBuffer[SCOUNT]; 			// store the analog value in the array, read from A
 int analogBufferTemp[SCOUNT];
 int analogBufferIndex = 0, copyIndex = 0;
 float averageVoltage = 0, tdsValue = 0, tdsLo = 999, tdsHi = -999;
+
+// these are the only external variables used by the graph function
+// it's a flag to draw the coordinate system only on the first call to the Graph() function
+// and will mimize flicker
+// also create some variables to store the old x and y, if you draw 2 graphs on the same display
+// you will need to store ox and oy per each display
+boolean redrawGraph = true;
+double ox , oy ;
 
 
 // **************** BELOW IS GENERATED AUTOMATICALLY BY THE GUISLICE BUILDER **************** //
@@ -115,6 +125,7 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
 //<Button Enums !Start!>
       case E_ELEM_BTN2:
         gslc_ElemSetTxtStr(&m_gui, statusbarText, "Summary");
+        redrawGraph = true;
         gslc_SetPageCur(&m_gui, E_PG_SUM);
         break;
       case E_ELEM_BTN_STNGS:
@@ -256,7 +267,7 @@ void setup()
   gslc_InitDebug(&DebugOut);
 
 	// Initial Setup
-  initialSetup();
+  initSetup();
 
 	// Initialize Relay pin as an output
 	pinMode(RELAY_PIN, OUTPUT);
@@ -289,18 +300,30 @@ void loop()
 		Serial.print(tempC);
 		Serial.println("ºC");
 		
-		} // End of 5sec update delay
+	} // End of 5sec update delay
 
-		// Get current time and print it on screen
-		getLocalTime(&timeinfo); // Update time
-		char clock[26];
-		strftime(clock, 26, "%H:%M:%S %m/%d/%y", &timeinfo); // Format time
-		gslc_ElemSetTxtStr(&m_gui, clockTxt, clock);				 // Update sreen text		
+	// Get current time and print it on screen
+	getLocalTime(&timeinfo); // Update time
+	char clock[26];
+	strftime(clock, 26, "%H:%M:%S %m/%d/%y", &timeinfo); // Format time
+	gslc_ElemSetTxtStr(&m_gui, clockTxt, clock);				 // Update sreen text		
 
-		// ------------------------------------------------
-		// Periodically call GUIslice update function
-		// ------------------------------------------------
-		gslc_Update(&m_gui);
+	// ------------------------------------------------
+	// Periodically call GUIslice update function
+	// ------------------------------------------------
+	gslc_Update(&m_gui);
+
+  if (gslc_GetPageCur(&m_gui) == E_PG_SUM) {
+    // Testing graph
+    double x, y;
+    for (x = 0; x <= 23; x += .1) {
+      y = sin(x);
+      Graph(x, y, 60, 230, 350, 180, 0, 23, 2, -1, 1, .25, "Graph Title", "x", "y", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK2, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
+   // Graph(x, y, 60, 290, 390, 260, 0, 6.5, 1, -1, 1, .25, "Sin Function", "x", "sin(x)", GSLC_COL_BLUE_LT1, GSLC_COL_RED_LT1, GSLC_COL_YELLOW, GSLC_COL_WHITE, GSLC_COL_BLACK, display1);
+    }
+
+  }
+    
 
 } // End of loop
 
@@ -317,7 +340,7 @@ void testSensors()
   tempSensor.requestTemperatures();
 	tempC = tempSensor.getTempCByIndex(0);
 
-  if (tempC < tempLo) tempLo = tempC;
+  if (tempC < tempLo) tempLo = tempC; // TODO: Clear all lo/hi values every 24hours. (or at 12:00AM everyday)
   if (tempC > tempHi) tempHi = tempC;
   
   if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle))
@@ -350,7 +373,7 @@ void testSensors()
  * @brief Initial setup for the device.
  * 
  */
-void initialSetup()
+void initSetup()
 {  
 
 	// Set the ring's value text color, font and the ring's min and max values for each ring.
@@ -529,6 +552,7 @@ int getMedianNum(int bArray[], int iFilterLen)
 	return bTemp;
 }
 
+
 /* Callback function to get the Email sending status */
 void smtpCallback(SMTP_Status status);
 
@@ -626,4 +650,132 @@ void smtpCallback(SMTP_Status status){
     }
     Serial.println("----------------\n");
   }
+
+}
+
+
+// * PORTED & MODIFIED FROM SRC: https://forum.arduino.cc/t/another-free-graph-function-for-plotting-in-cartesian-space/354751 *
+/**
+ * function to draw a cartesian coordinate system and plot whatever data you want
+ * just pass x and y and the graph will be drawn
+ * 
+ * @param x: x data point
+ * @param y: y datapont
+ * @param gx: x graph location (lower left)
+ * @param gy: y graph location (lower left)
+ * @param w: width of graph
+ * @param h: height of graph
+ * @param xlo: lower bound of x axis
+ * @param xhi: upper bound of x asis
+ * @param xinc: division of x axis (distance not count)
+ * @param ylo: lower bound of y axis
+ * @param yhi: upper bound of y asis
+ * @param yinc: division of y axis (distance not count)
+ * @param title: title of graph
+ * @param xlabel: x asis label
+ * @param ylabel: y asis label
+ * @param gcolor: graph line colors
+ * @param acolor: axi ine colors
+ * @param pcolor: color of your plotted data
+ * @param tcolor: text color
+ * @param bcolor: background color
+ * @param redraw: flag to redraw graph on fist call only
+ */
+void Graph(double x, double y, double gx, double gy, double w, double h, double xlo, double xhi, double xinc, double ylo, double yhi, double yinc, char* title, char* xlabel, char* ylabel, gslc_tsColor gcolor, gslc_tsColor acolor, gslc_tsColor pcolor, gslc_tsColor tcolor, gslc_tsColor bcolor, boolean &redraw) {
+
+  // double ydiv, xdiv;
+  double i;
+  double temp;
+  static char bufstr[15];
+
+  if (redraw == true) {
+
+    redraw = false;
+    // initialize old x and old y in order to draw the first point of the graph
+    // but save the transformed value
+    // note my transform funcition is the same as the map function, except the map uses long and we need doubles
+    ox = (x - xlo) * ( w) / (xhi - xlo) + gx;
+    oy = (y - ylo) * (gy - h - gy) / (yhi - ylo) + gy;
+    // draw y scale
+    for ( i = ylo; i <= yhi; i += yinc) {
+      // compute the transform
+      temp =  (i - ylo) * (gy - h - gy) / (yhi - ylo) + gy;
+
+      if (i == 0) {
+        gslc_DrawLine(&m_gui, gx, temp, gx + w, temp, acolor);
+      }
+      else {
+        gslc_DrawLine(&m_gui, gx, temp, gx + w, temp, gcolor);
+      }
+      // draw the axis labels
+      // d.setTextSize(1);
+      // d.setTextColor(tcolor, bcolor);
+      // gslc_ElemSetTxtCol(&m_gui, )
+      // d.setCursor(gx - 40, temp);
+      // precision is default Arduino--this could really use some format control
+      // d.println(i);
+	    sprintf(bufstr, "%.2lf", i);
+      gslc_DrawTxtBase(&m_gui, bufstr, (gslc_tsRect){gx - 40, temp,30,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_BOT_RIGHT, tcolor, bcolor, 0, 0);
+    }
+    // draw x scale
+    for (i = xlo; i <= xhi; i += xinc) {
+
+      // compute the transform
+      temp =  (i - xlo) * ( w) / (xhi - xlo) + gx;
+      if (i == 0) {
+        gslc_DrawLine(&m_gui, temp, gy, temp, gy - h, acolor);
+      }
+      else {
+        gslc_DrawLine(&m_gui, temp, gy, temp, gy - h, gcolor);
+      }
+      // draw the axis labels
+      // d.setTextSize(1);
+      // d.setTextColor(tcolor, bcolor);
+      // d.setCursor(temp, gy + 10);
+      // // precision is default Arduino--this could really use some format control
+      // d.println(i);
+      sprintf(bufstr, "%.0lf", i);
+      gslc_DrawTxtBase(&m_gui, bufstr, (gslc_tsRect){temp, gy + 10,30,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_TOP_LEFT, tcolor, bcolor, 0, 0);
+    }
+
+    //now draw the graph labels
+    // d.setTextSize(2);
+    // d.setTextColor(tcolor, bcolor);
+    // d.setCursor(gx , gy - h - 30);
+    // d.println(title);
+    // sprintf(bufStr, "%s", title);
+    // pElemRef = gslc_ElemCreateTxt(&m_gui, GSLC_ID_AUTO, E_PG_SUM, (gslc_tsRect){gx, gy - h - 30, 250,18}, title, 50, E_BUILTIN5X8);
+    gslc_DrawTxtBase(&m_gui, title, (gslc_tsRect){gx, gy - h - 30, 250,18}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_MID, tcolor, bcolor, 0, 0);
+
+    // d.setTextSize(1);
+    // d.setTextColor(acolor, bcolor);
+    // d.setCursor(gx , gy + 20);
+    // d.println(xlabel);
+    gslc_DrawTxtBase(&m_gui, xlabel, (gslc_tsRect){gx, gy + 20, 100,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_LEFT, tcolor, bcolor, 0, 0);
+
+    // d.setTextSize(1);
+    // d.setTextColor(acolor, bcolor);
+    // d.setCursor(gx - 30, gy - h - 10);
+    // d.println(ylabel);
+    gslc_DrawTxtBase(&m_gui, ylabel, (gslc_tsRect){gx - 30, gy - h - 10, 100,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_LEFT, tcolor, bcolor, 0, 0);
+
+  }
+
+  // the coordinates are now drawn, plot the data
+  // the entire plotting code are these few lines...
+  // recall that ox and oy are initialized above
+  x =  (x - xlo) * ( w) / (xhi - xlo) + gx;
+  y =  (y - ylo) * (gy - h - gy) / (yhi - ylo) + gy;
+  if (ox <= x)
+  {
+    gslc_DrawLine(&m_gui, ox, oy, x, y, pcolor);
+    // it's up to you but drawing 2 more lines to give the graph some thickness
+    gslc_DrawLine(&m_gui, ox, oy + 1, x, y + 1, pcolor);
+    gslc_DrawLine(&m_gui, ox, oy - 1, x, y - 1, pcolor);
+    ox = x;
+    oy = y;
+    delay(10);
+  }
+  
+
 }
