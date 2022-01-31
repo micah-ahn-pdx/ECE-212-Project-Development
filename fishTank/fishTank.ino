@@ -47,32 +47,46 @@ SMTPSession smtp;
 
 // * Starting Variables
 // loop update variable
-unsigned long loopTime = 0L ;
+unsigned long loopTime = 0L;
+
 // WiFi Setup
 const char* ssid = "01001101";
 const char* pwd = "0x01001101";
+
 // Getting Time
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = -28800;   // GMT offset (seconds)
 const int   daylightOffset_sec = 3600;  // daylight offset (seconds)
 struct tm timeinfo;
+int curHr = -1, prevHr = -1;
+
 // Temp
 OneWire oneWire(TEMP_SENSOR);
 DallasTemperature tempSensor(&oneWire);
 float tempC = 0, tempLo = 999, tempHi = -999; // Where to store current temperature
+
 // TDS
 int analogBuffer[SCOUNT]; 			// store the analog value in the array, read from ADC
 int analogBufferTemp[SCOUNT];
 int analogBufferIndex = 0, copyIndex = 0;
 float averageVoltage = 0, tdsValue = 0, tdsLo = 999, tdsHi = -999;
 
-// these are the only external variables used by the graph function
-// it's a flag to draw the coordinate system only on the first call to the Graph() function
-// and will mimize flicker
-// also create some variables to store the old x and y, if you draw 2 graphs on the same display
-// you will need to store ox and oy per each display
+// Graph variables
 boolean redrawGraph = true;
-double ox , oy ;
+double ox , oy;
+
+// Logging data
+typedef struct logNode // struct that holds all the logging stuff
+{
+  double tempVal[24] = {25, 26, 21, 23, 20, 25, 23, 21, 18, 27, 29, 30, 26, 32, 22, 19, 23, 20, 28, 22, 26, 28, 24, 29}; // dummy temps for testing
+  double tdsVal[24], phVal[24];
+  char logTime[24][5] = {"12AM", "1AM", "2AM", "3AM", "4AM", "5AM", "6AM", "7AM", "8AM", "9AM", "10AM", "11AM", "12PM", "1PM", "2PM", "3PM", "4PM", "5PM", "6PM", "7PM", "8PM", "9PM", "10PM", "11PM"};
+  int curIndex = -1, startIndex = -1;
+  boolean isFull = false;
+} logNode;
+
+logNode dataLog; // Initiate dataLog where we'll store the past 24hrs readings
+
 
 
 // **************** BELOW IS GENERATED AUTOMATICALLY BY THE GUISLICE BUILDER **************** //
@@ -254,6 +268,7 @@ void setup()
   // Get local time from ntp server via WiFi
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 	getLocalTime(&timeinfo);
+  dataLog.startIndex = timeinfo.tm_min%24; // Get the current hour (when the device is first turned on)
 
   // Disconnect WiFi
    WiFi.disconnect(true);
@@ -286,7 +301,6 @@ void loop()
     // main sensors func
     testSensors();
 
-
     // * Debug stuff: 
 		// Get temp
 		tempSensor.requestTemperatures();
@@ -305,24 +319,14 @@ void loop()
 	// Get current time and print it on screen
 	getLocalTime(&timeinfo); // Update time
 	char clock[26];
-	strftime(clock, 26, "%H:%M:%S %m/%d/%y", &timeinfo); // Format time
+	strftime(clock, 26, "%I:%M:%S%p %m/%d/%y", &timeinfo); // Format time
 	gslc_ElemSetTxtStr(&m_gui, clockTxt, clock);				 // Update sreen text		
 
-	// ------------------------------------------------
-	// Periodically call GUIslice update function
-	// ------------------------------------------------
-	gslc_Update(&m_gui);
+	gslc_Update(&m_gui); // Periodically call GUIslice update function
 
-  if (gslc_GetPageCur(&m_gui) == E_PG_SUM) {
-    // Testing graph
-    double x, y;
-    for (x = 0; x <= 23; x += .1) {
-      y = sin(x);
-      Graph(x, y, 60, 230, 350, 180, 0, 23, 2, -1, 1, .25, "Graph Title", "x", "y", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK2, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
-   // Graph(x, y, 60, 290, 390, 260, 0, 6.5, 1, -1, 1, .25, "Sin Function", "x", "sin(x)", GSLC_COL_BLUE_LT1, GSLC_COL_RED_LT1, GSLC_COL_YELLOW, GSLC_COL_WHITE, GSLC_COL_BLACK, display1);
-    }
+  logData(); // Logs data every 1hr
 
-  }
+  handleGraphUpdate(); // Draws the graph when the user is in the summary page
     
 
 } // End of loop
@@ -340,8 +344,9 @@ void testSensors()
   tempSensor.requestTemperatures();
 	tempC = tempSensor.getTempCByIndex(0);
 
-  if (tempC < tempLo) tempLo = tempC; // TODO: Clear all lo/hi values every 24hours. (or at 12:00AM everyday)
+  if (tempC < tempLo) tempLo = tempC;
   if (tempC > tempHi) tempHi = tempC;
+  
   
   if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle))
   { // display temp in F
@@ -659,6 +664,7 @@ void smtpCallback(SMTP_Status status){
  * function to draw a cartesian coordinate system and plot whatever data you want
  * just pass x and y and the graph will be drawn
  * 
+ * @param dx: x data point (For current hour) | This is used to set at what time does the x axis start from.
  * @param x: x data point
  * @param y: y datapont
  * @param gx: x graph location (lower left)
@@ -671,7 +677,6 @@ void smtpCallback(SMTP_Status status){
  * @param ylo: lower bound of y axis
  * @param yhi: upper bound of y asis
  * @param yinc: division of y axis (distance not count)
- * @param title: title of graph
  * @param xlabel: x asis label
  * @param ylabel: y asis label
  * @param gcolor: graph line colors
@@ -681,9 +686,8 @@ void smtpCallback(SMTP_Status status){
  * @param bcolor: background color
  * @param redraw: flag to redraw graph on fist call only
  */
-void Graph(double x, double y, double gx, double gy, double w, double h, double xlo, double xhi, double xinc, double ylo, double yhi, double yinc, char* title, char* xlabel, char* ylabel, gslc_tsColor gcolor, gslc_tsColor acolor, gslc_tsColor pcolor, gslc_tsColor tcolor, gslc_tsColor bcolor, boolean &redraw) {
+void Graph(int dx, double x, double y, double gx, double gy, double w, double h, double xlo, double xhi, double xinc, double ylo, double yhi, double yinc, char* xlabel, char* ylabel, gslc_tsColor gcolor, gslc_tsColor acolor, gslc_tsColor pcolor, gslc_tsColor tcolor, gslc_tsColor bcolor, boolean &redraw) {
 
-  // double ydiv, xdiv;
   double i;
   double temp;
   static char bufstr[15];
@@ -691,9 +695,9 @@ void Graph(double x, double y, double gx, double gy, double w, double h, double 
   if (redraw == true) {
 
     redraw = false;
+    gslc_DrawFillRect(&m_gui, (gslc_tsRect){gx,gy-h,w+10,h+20}, bcolor);
     // initialize old x and old y in order to draw the first point of the graph
     // but save the transformed value
-    // note my transform funcition is the same as the map function, except the map uses long and we need doubles
     ox = (x - xlo) * ( w) / (xhi - xlo) + gx;
     oy = (y - ylo) * (gy - h - gy) / (yhi - ylo) + gy;
     // draw y scale
@@ -708,13 +712,7 @@ void Graph(double x, double y, double gx, double gy, double w, double h, double 
         gslc_DrawLine(&m_gui, gx, temp, gx + w, temp, gcolor);
       }
       // draw the axis labels
-      // d.setTextSize(1);
-      // d.setTextColor(tcolor, bcolor);
-      // gslc_ElemSetTxtCol(&m_gui, )
-      // d.setCursor(gx - 40, temp);
-      // precision is default Arduino--this could really use some format control
-      // d.println(i);
-	    sprintf(bufstr, "%.2lf", i);
+	    sprintf(bufstr, "%.0lf", i);
       gslc_DrawTxtBase(&m_gui, bufstr, (gslc_tsRect){gx - 40, temp,30,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_BOT_RIGHT, tcolor, bcolor, 0, 0);
     }
     // draw x scale
@@ -729,35 +727,13 @@ void Graph(double x, double y, double gx, double gy, double w, double h, double 
         gslc_DrawLine(&m_gui, temp, gy, temp, gy - h, gcolor);
       }
       // draw the axis labels
-      // d.setTextSize(1);
-      // d.setTextColor(tcolor, bcolor);
-      // d.setCursor(temp, gy + 10);
-      // // precision is default Arduino--this could really use some format control
-      // d.println(i);
-      sprintf(bufstr, "%.0lf", i);
-      gslc_DrawTxtBase(&m_gui, bufstr, (gslc_tsRect){temp, gy + 10,30,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_TOP_LEFT, tcolor, bcolor, 0, 0);
+      gslc_DrawTxtBase(&m_gui, dataLog.logTime[(int)(dx+i)%24], (gslc_tsRect){temp, gy + 10,30,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_TOP_LEFT, tcolor, bcolor, 0, 0);
     }
 
-    //now draw the graph labels
-    // d.setTextSize(2);
-    // d.setTextColor(tcolor, bcolor);
-    // d.setCursor(gx , gy - h - 30);
-    // d.println(title);
-    // sprintf(bufStr, "%s", title);
-    // pElemRef = gslc_ElemCreateTxt(&m_gui, GSLC_ID_AUTO, E_PG_SUM, (gslc_tsRect){gx, gy - h - 30, 250,18}, title, 50, E_BUILTIN5X8);
-    gslc_DrawTxtBase(&m_gui, title, (gslc_tsRect){gx, gy - h - 30, 250,18}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_MID, tcolor, bcolor, 0, 0);
-
-    // d.setTextSize(1);
-    // d.setTextColor(acolor, bcolor);
-    // d.setCursor(gx , gy + 20);
-    // d.println(xlabel);
-    gslc_DrawTxtBase(&m_gui, xlabel, (gslc_tsRect){gx, gy + 20, 100,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_LEFT, tcolor, bcolor, 0, 0);
-
-    // d.setTextSize(1);
-    // d.setTextColor(acolor, bcolor);
-    // d.setCursor(gx - 30, gy - h - 10);
-    // d.println(ylabel);
-    gslc_DrawTxtBase(&m_gui, ylabel, (gslc_tsRect){gx - 30, gy - h - 10, 100,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_LEFT, tcolor, bcolor, 0, 0);
+    // draw the graph labels
+    // gslc_DrawTxtBase(&m_gui, title, (gslc_tsRect){gx, gy - h - 30, 250,18}, &m_asFont[E_BUILTIN10X16], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_MID, tcolor, bcolor, 0, 0);
+    gslc_DrawTxtBase(&m_gui, xlabel, (gslc_tsRect){gx, gy + 20, 100,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_LEFT, pcolor, bcolor, 0, 0);
+    gslc_DrawTxtBase(&m_gui, ylabel, (gslc_tsRect){gx - 30, gy - h - 10, 100,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_LEFT, pcolor, bcolor, 0, 0);
 
   }
 
@@ -774,8 +750,67 @@ void Graph(double x, double y, double gx, double gy, double w, double h, double 
     gslc_DrawLine(&m_gui, ox, oy - 1, x, y - 1, pcolor);
     ox = x;
     oy = y;
-    delay(10);
   }
-  
 
+}
+
+
+void logData()
+{
+  curHr = timeinfo.tm_min%24; // DEBUG: for now it logs every minute (for testing purposes) need to change to 'tm_hour' in final build
+
+  if (curHr != prevHr) // Update what's inside every 1 hour.
+	{
+		// Log the temperature value
+    dataLog.tempVal[curHr] = tempC;
+    // TODO: Log TDS & pH values
+
+    dataLog.curIndex = curHr; // Update the log current index to the current hour
+
+    if ((dataLog.curIndex+1)%24 == dataLog.startIndex) dataLog.isFull = true; // Mark the log full recording the first 24hr worth of data
+
+    if (curHr == 0)
+    {
+      // Reset lo/hi values every day at 12AM
+      tempLo = tdsLo = 999;
+      tempHi = tdsHi = -999; 
+    }
+    
+    redrawGraph = true;
+		prevHr = curHr;
+	}
+}
+
+
+void handleGraphUpdate() {
+  if (gslc_GetPageCur(&m_gui) == E_PG_SUM) { // Only draw/update if the user is in the summary page
+    // Testing graph
+    int x, y, ymin, ymax, yinc; // needed variables for the plot
+    int iCap = (dataLog.isFull) ? 23 : dataLog.curIndex - dataLog.startIndex; // How many x data to plot is determined by how many hours passed if the log isn't full yet, and if it's full it's always 24(with the 0).
+
+    for (int i = 0; i <= iCap; i++) {
+      // Check if there is a 24hrs worth of data logged or not
+      if (dataLog.isFull)
+      {
+        x = (i+dataLog.curIndex+1) % 24; // If there is, start the x axis from the next hour (so plot ends with the current hour value).
+      } else {
+        x = (i+dataLog.startIndex) % 24; // If not, start the x axis from the first hour when the device was turned on.
+      }
+
+      // Draw the temperature plot (Shows values in C or F depending on user's preference)
+      if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle)) 
+      {
+        y = tempSensor.toFahrenheit(dataLog.tempVal[x]);
+        Graph(x, i, y, 60, 230, 350, 180, 0, 23, 2, 50, 90, 10, "time of day", "temperature (\xf7""F)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK2, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
+      } else 
+      {
+        y = dataLog.tempVal[x];
+        Graph(x, i, y, 60, 230, 350, 180, 0, 23, 2, 10, 35, 5, "time of day", "temperature (\xf7""C)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK2, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
+      }
+
+      // TODO: plot TDS & pH plots (Add tabs for each plot type)
+
+    }
+
+  }
 }
