@@ -22,6 +22,7 @@
 #include "time.h"
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include "ph_grav.h"   
 
 // * 
 #define RELAY_PIN   13	  	// Relay pin
@@ -43,6 +44,8 @@
 
 /* The SMTP Session object used for Email sending */
 SMTPSession smtp;
+
+Gravity_pH pH = Gravity_pH(A2);   // pH sensor pin assign
 
 // * Starting Variables
 // loop update variable
@@ -69,6 +72,11 @@ int analogBuffer[SCOUNT]; 			// store the analog value in the array, read from A
 int analogBufferTemp[SCOUNT];
 int analogBufferIndex = 0, copyIndex = 0;
 float averageVoltage = 0, tdsValue = 0, tdsLo = 999, tdsHi = -999;
+
+// pH
+uint8_t user_bytes_received = 0;                
+const uint8_t bufferlen = 32;                   
+char user_data[bufferlen]; 
 
 // Graph variables
 boolean redrawGraph = true;
@@ -266,7 +274,50 @@ void setup()
   // ------------------------------------------------
   // Initialize
   // ------------------------------------------------
-  Serial.begin(115200);
+  Serial.begin(void parse_cmd(char* string) {                   
+  strupr(string);                                
+  if (strcmp(string, "CAL,7") == 0) {       
+    pH.cal_mid();                                
+    Serial.println("MID CALIBRATED");
+  }
+  else if (strcmp(string, "CAL,4") == 0) {            
+    pH.cal_low();                                
+    Serial.println("LOW CALIBRATED");
+  }
+  else if (strcmp(string, "CAL,10") == 0) {      
+    pH.cal_high();                               
+    Serial.println("HIGH CALIBRATED");
+  }
+  else if (strcmp(string, "CAL,CLEAR") == 0) { 
+    pH.cal_clear();                              
+    Serial.println("CALIBRATION CLEARED");
+  }
+}
+
+void calibrate() {
+  Serial.begin(115200);                            
+  delay(200);
+  Serial.println(F("Use commands \"CAL,7\", \"CAL,4\", and \"CAL,10\" to calibrate the circuit to those respective values"));
+  Serial.println(F("Use command \"CAL,CLEAR\" to clear the calibration"));
+  if (pH.begin()) {                                     
+    Serial.println("Loaded EEPROM");
+  }
+}
+
+void loop() {
+  if (Serial.available() > 0) {                                                      
+    user_bytes_received = Serial.readBytesUntil(13, user_data, sizeof(user_data));   
+  }
+
+  if (user_bytes_received) {                                                      
+    parse_cmd(user_data);                                                          
+    user_bytes_received = 0;                                                        
+    memset(user_data, 0, sizeof(user_data));                                         
+  }
+  
+  Serial.println(pH.read_ph());                                                      
+  delay(1000);
+});
 
   //connect to WiFi
   Serial.printf("Connecting to %s ", ssid);
@@ -864,4 +915,49 @@ void handleGraphUpdate() {
     }
 
   }
+}
+
+void parse_cmd(char* string) {                   
+  strupr(string);                                
+  if (strcmp(string, "CAL,7") == 0) {       
+    pH.cal_mid();                                
+    Serial.println("MID CALIBRATED");
+  }
+  else if (strcmp(string, "CAL,4") == 0) {            
+    pH.cal_low();                                
+    Serial.println("LOW CALIBRATED");
+  }
+  else if (strcmp(string, "CAL,10") == 0) {      
+    pH.cal_high();                               
+    Serial.println("HIGH CALIBRATED");
+  }
+  else if (strcmp(string, "CAL,CLEAR") == 0) { 
+    pH.cal_clear();                              
+    Serial.println("CALIBRATION CLEARED");
+  }
+}
+
+void calibrate() {
+  Serial.begin(115200);                            
+  delay(200);
+  Serial.println(F("Use commands \"CAL,7\", \"CAL,4\", and \"CAL,10\" to calibrate the circuit to those respective values"));
+  Serial.println(F("Use command \"CAL,CLEAR\" to clear the calibration"));
+  if (pH.begin()) {                                     
+    Serial.println("Loaded EEPROM");
+  }
+}
+
+void get_pH() {
+  if (Serial.available() > 0) {                                                      
+    user_bytes_received = Serial.readBytesUntil(13, user_data, sizeof(user_data));   
+  }
+
+  if (user_bytes_received) {                                                      
+    parse_cmd(user_data);                                                          
+    user_bytes_received = 0;                                                        
+    memset(user_data, 0, sizeof(user_data));                                         
+  }
+  
+  Serial.println(pH.read_ph());                                                      
+  delay(1000);
 }
