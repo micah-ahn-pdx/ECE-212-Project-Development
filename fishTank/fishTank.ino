@@ -17,7 +17,6 @@
 // Headers to include
 // ------------------------------------------------
 #include "fishTank_GSLC.h"
-#include <Arduino.h>
 #include <WiFi.h>
 #include <ESP_Mail_Client.h>
 #include "time.h"
@@ -27,7 +26,7 @@
 // * 
 #define RELAY_PIN   13	  	// Relay pin
 #define TEMP_SENSOR 4			  // Temp sensor pin
-#define TDS_SENSOR  25			// TDS Sensor pin
+#define TDS_SENSOR  39			// TDS Sensor pin
 
 #define VREF        3.3     // [TDS] analog reference voltage(Volt) of the ADC
 #define SCOUNT      30      // [TDS] sum of sample point
@@ -81,7 +80,7 @@ typedef struct logNode // struct that holds all the logging stuff
   double tempVal[24] = {25, 26, 21, 23, 20, 25, 23, 21, 18, 27, 29, 30, 26, 32, 22, 19, 23, 20, 28, 22, 26, 28, 24, 29}; // dummy temps for testing
   double tdsVal[24], phVal[24];
   char logTime[24][5] = {"12AM", "1AM", "2AM", "3AM", "4AM", "5AM", "6AM", "7AM", "8AM", "9AM", "10AM", "11AM", "12PM", "1PM", "2PM", "3PM", "4PM", "5PM", "6PM", "7PM", "8PM", "9PM", "10PM", "11PM"};
-  int curIndex = -1, startIndex = -1;
+  int curIndex = -1, startIndex = -1, selectedSum = 0;
   boolean isFull = false;
 } logNode;
 
@@ -98,22 +97,23 @@ logNode dataLog; // Initiate dataLog where we'll store the past 24hrs readings
 //<Save_References !Start!>
 gslc_tsElemRef* btnOther          = NULL;
 gslc_tsElemRef* btnSettings       = NULL;
-gslc_tsElemRef* btnStngNext13     = NULL;
-gslc_tsElemRef* btnStngPrev14     = NULL;
 gslc_tsElemRef* btnSummary        = NULL;
 gslc_tsElemRef* clockTxt          = NULL;
 gslc_tsElemRef* desiredTemp       = NULL;
 gslc_tsElemRef* noHeaterCB        = NULL;
 gslc_tsElemRef* phGauge           = NULL;
 gslc_tsElemRef* phLoHiTxt         = NULL;
+gslc_tsElemRef* phSumBtn          = NULL;
 gslc_tsElemRef* phUnitTxt         = NULL;
 gslc_tsElemRef* settingsTempUnitTxt= NULL;
 gslc_tsElemRef* statusbarText     = NULL;
 gslc_tsElemRef* tdsGauge          = NULL;
 gslc_tsElemRef* tdsLoHiTxt        = NULL;
+gslc_tsElemRef* tdsSumBtn         = NULL;
 gslc_tsElemRef* tdsUnitTxt        = NULL;
 gslc_tsElemRef* tempGauge         = NULL;
 gslc_tsElemRef* tempLoHiTxt       = NULL;
+gslc_tsElemRef* tempSumBtn        = NULL;
 gslc_tsElemRef* tempUnitToggle    = NULL;
 gslc_tsElemRef* tempUnitTxt       = NULL;
 gslc_tsElemRef* m_pElemKeyPadNum  = NULL;
@@ -138,9 +138,10 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
     switch (pElem->nId) {
 //<Button Enums !Start!>
       case E_ELEM_BTN2:
+        gslc_SetPageCur(&m_gui, E_PG_SUM);
         gslc_ElemSetTxtStr(&m_gui, statusbarText, "Summary");
         redrawGraph = true;
-        gslc_SetPageCur(&m_gui, E_PG_SUM);
+        handleGraphUpdate();
         break;
       case E_ELEM_BTN_STNGS:
         gslc_ElemSetTxtStr(&m_gui, statusbarText, "Settings");
@@ -155,16 +156,27 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
         gslc_ElemSetTxtStr(&m_gui, statusbarText, "Home");
         gslc_SetPageCur(&m_gui, E_PG_MAIN);
         break;
+      case E_ELEM_BTN_TEMPSUM:
+        dataLog.selectedSum = 0;
+        redrawGraph = true;
+        handleGraphUpdate();
+        break;
+      case E_ELEM_BTN_TDSSUM:
+        dataLog.selectedSum = 1;
+        redrawGraph = true;
+        handleGraphUpdate();
+        break;
+      case E_ELEM_BTN_PHSUM:
+        dataLog.selectedSum = 2;
+        redrawGraph = true;
+        handleGraphUpdate();
+        break;
       case E_ELEM_TOGGLE2:
         handleTempUnitToggle();
         break;
       case E_ELEM_BTN_HOME2:
         gslc_ElemSetTxtStr(&m_gui, statusbarText, "Home");
         gslc_SetPageCur(&m_gui, E_PG_MAIN);
-        break;
-      case E_ELEM_BTN13:
-        break;
-      case E_ELEM_BTN14:
         break;
       case E_ELEM_NUMINPUT1:
         // Clicked on edit field, so show popup box and associate with this text field
@@ -326,7 +338,8 @@ void loop()
 
   logData(); // Logs data every 1hr
 
-  handleGraphUpdate(); // Draws the graph when the user is in the summary page
+  // Draws the graph when the user is in the summary page
+  handleGraphUpdate();
     
 
 } // End of loop
@@ -696,6 +709,7 @@ void Graph(int dx, double x, double y, double gx, double gy, double w, double h,
 
     redraw = false;
     gslc_DrawFillRect(&m_gui, (gslc_tsRect){gx,gy-h,w+10,h+20}, bcolor);
+
     // initialize old x and old y in order to draw the first point of the graph
     // but save the transformed value
     ox = (x - xlo) * ( w) / (xhi - xlo) + gx;
@@ -726,15 +740,16 @@ void Graph(int dx, double x, double y, double gx, double gy, double w, double h,
       else {
         gslc_DrawLine(&m_gui, temp, gy, temp, gy - h, gcolor);
       }
-      // draw the axis labels
-      gslc_DrawTxtBase(&m_gui, dataLog.logTime[(int)(dx+i)%24], (gslc_tsRect){temp, gy + 10,30,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_TOP_LEFT, tcolor, bcolor, 0, 0);
+      // draw the axis labels on every other axis
+      if ((int)i%2 == 0) 
+        gslc_DrawTxtBase(&m_gui, dataLog.logTime[(int)(dx+i)%24], (gslc_tsRect){temp, gy + 10,30,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_TOP_LEFT, tcolor, bcolor, 0, 0);
     }
 
     // draw the graph labels
     // gslc_DrawTxtBase(&m_gui, title, (gslc_tsRect){gx, gy - h - 30, 250,18}, &m_asFont[E_BUILTIN10X16], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_MID, tcolor, bcolor, 0, 0);
     gslc_DrawTxtBase(&m_gui, xlabel, (gslc_tsRect){gx, gy + 20, 100,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_LEFT, pcolor, bcolor, 0, 0);
     gslc_DrawTxtBase(&m_gui, ylabel, (gslc_tsRect){gx - 30, gy - h - 10, 100,10}, &m_asFont[E_BUILTIN5X8], GSLC_TXT_ALLOC_INT, GSLC_ALIGN_MID_LEFT, pcolor, bcolor, 0, 0);
-
+    
   }
 
   // the coordinates are now drawn, plot the data
@@ -762,7 +777,7 @@ void logData()
   if (curHr != prevHr) // Update what's inside every 1 hour.
 	{
 		// Log the temperature value
-    dataLog.tempVal[curHr] = tempC;
+    // dataLog.tempVal[curHr] = tempC;
     // TODO: Log TDS & pH values
 
     dataLog.curIndex = curHr; // Update the log current index to the current hour
@@ -784,11 +799,14 @@ void logData()
 
 void handleGraphUpdate() {
   if (gslc_GetPageCur(&m_gui) == E_PG_SUM) { // Only draw/update if the user is in the summary page
-    // Testing graph
-    int x, y, ymin, ymax, yinc; // needed variables for the plot
-    int iCap = (dataLog.isFull) ? 23 : dataLog.curIndex - dataLog.startIndex; // How many x data to plot is determined by how many hours passed if the log isn't full yet, and if it's full it's always 24(with the 0).
 
-    for (int i = 0; i <= iCap; i++) {
+    double gx = 40, gy = 220, gw = 420, gh = 180;    
+    int x, y; // needed variables for the plot
+    int iCap = (dataLog.isFull) ? 23 : dataLog.curIndex - dataLog.startIndex; // How many x data to plot is determined by how many hours passed if the log isn't full yet, and if it's full it's always 24(with the 0).
+    gslc_tsElemRef* pElemRef = NULL; // pointer reference to elements
+
+    for (int i = 0; i <= iCap; i++) 
+    {
       // Check if there is a 24hrs worth of data logged or not
       if (dataLog.isFull)
       {
@@ -797,18 +815,51 @@ void handleGraphUpdate() {
         x = (i+dataLog.startIndex) % 24; // If not, start the x axis from the first hour when the device was turned on.
       }
 
-      // Draw the temperature plot (Shows values in C or F depending on user's preference)
-      if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle)) 
-      {
-        y = tempSensor.toFahrenheit(dataLog.tempVal[x]);
-        Graph(x, i, y, 60, 230, 350, 180, 0, 23, 2, 50, 90, 10, "time of day", "temperature (\xf7""F)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK2, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
-      } else 
-      {
-        y = dataLog.tempVal[x];
-        Graph(x, i, y, 60, 230, 350, 180, 0, 23, 2, 10, 35, 5, "time of day", "temperature (\xf7""C)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK2, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
-      }
 
-      // TODO: plot TDS & pH plots (Add tabs for each plot type)
+      if (dataLog.selectedSum == 0)
+      {
+        gslc_ElemSetTxtStr(&m_gui, statusbarText, "Temperature Summary");
+        // Highlight selected tab/btn
+        if (redrawGraph) {
+          gslc_ElemSetCol(&m_gui, tempSumBtn,GSLC_COL_WHITE,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT3);
+          gslc_ElemSetCol(&m_gui, tdsSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+          gslc_ElemSetCol(&m_gui, phSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+        }
+        
+        // Draw the temperature plot (Shows values in C or F depending on user's preference)
+        if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle)) 
+        {
+          y = tempSensor.toFahrenheit(dataLog.tempVal[x]);
+          Graph(x, i, y, gx, gy, gw, gh, 0, 23, 1, 50, 90, 10, "time of day", "temperature (\xf7""F)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK3, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
+        } else 
+        {
+          y = dataLog.tempVal[x];
+          Graph(x, i, y, gx, gy, gw, gh, 0, 23, 1, 10, 35, 5, "time of day", "temperature (\xf7""C)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK3, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
+        }
+      
+      } else if (dataLog.selectedSum == 1)
+      {
+        gslc_ElemSetTxtStr(&m_gui, statusbarText, "TDS Summary");
+        // Highlight selected tab/btn
+        if (redrawGraph) {
+          gslc_ElemSetCol(&m_gui, tdsSumBtn,GSLC_COL_WHITE,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT3);
+          gslc_ElemSetCol(&m_gui, tempSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+          gslc_ElemSetCol(&m_gui, phSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+        }
+        // TODO graph TDS
+      }
+      else
+      {
+        gslc_ElemSetTxtStr(&m_gui, statusbarText, "pH Summary");
+        // Highlight selected tab/btn
+        if (redrawGraph) {
+          gslc_ElemSetCol(&m_gui, phSumBtn,GSLC_COL_WHITE,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT3);
+          gslc_ElemSetCol(&m_gui, tdsSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+          gslc_ElemSetCol(&m_gui, tempSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+        }
+        // TODO graph pH
+      }
+      
 
     }
 

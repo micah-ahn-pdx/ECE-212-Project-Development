@@ -52,15 +52,16 @@
 //<Enum !Start!>
 enum {E_PG_BASE,E_PG_MAIN,E_PG_POPUP_NOTIFY,E_PG_SUM,E_PG_STNG
       ,E_POP_KEYPAD_NUM};
-enum {E_DRAW_LINE4,E_DRAW_LINE5,E_ELEM_BOX2,E_ELEM_BTN13,E_ELEM_BTN14
-      ,E_ELEM_BTN2,E_ELEM_BTN4,E_ELEM_BTN7,E_ELEM_BTN_HOME1
-      ,E_ELEM_BTN_HOME2,E_ELEM_BTN_STNGS,E_ELEM_CHECK2,E_ELEM_CLOCK_TXT
-      ,E_ELEM_NUMINPUT1,E_ELEM_PHGAUGE,E_ELEM_PHUNIT_TEXT
-      ,E_ELEM_TDSGAUGE,E_ELEM_TDSUNIT_TEXT,E_ELEM_TEAMNAME_TXT
-      ,E_ELEM_TEMPGAUGE,E_ELEM_TEMPUNIT_TEXT,E_ELEM_TEXT11
-      ,E_ELEM_TEXT14,E_ELEM_TEXT17,E_ELEM_TEXT26,E_ELEM_TEXT27
-      ,E_ELEM_TEXT28,E_ELEM_TEXT29,E_ELEM_TEXT3,E_ELEM_TEXT30
-      ,E_ELEM_TEXT31,E_ELEM_TITLE_TXT,E_ELEM_TOGGLE2,E_ELEM_KEYPAD_NUM};
+enum {E_DRAW_LINE4,E_DRAW_LINE5,E_ELEM_BOX2,E_ELEM_BTN2,E_ELEM_BTN4
+      ,E_ELEM_BTN7,E_ELEM_BTN_HOME1,E_ELEM_BTN_HOME2,E_ELEM_BTN_PHSUM
+      ,E_ELEM_BTN_STNGS,E_ELEM_BTN_TDSSUM,E_ELEM_BTN_TEMPSUM
+      ,E_ELEM_CHECK2,E_ELEM_CLOCK_TXT,E_ELEM_NUMINPUT1,E_ELEM_PHGAUGE
+      ,E_ELEM_PHUNIT_TEXT,E_ELEM_TDSGAUGE,E_ELEM_TDSUNIT_TEXT
+      ,E_ELEM_TEAMNAME_TXT,E_ELEM_TEMPGAUGE,E_ELEM_TEMPUNIT_TEXT
+      ,E_ELEM_TEXT11,E_ELEM_TEXT14,E_ELEM_TEXT17,E_ELEM_TEXT26
+      ,E_ELEM_TEXT27,E_ELEM_TEXT28,E_ELEM_TEXT29,E_ELEM_TEXT3
+      ,E_ELEM_TEXT30,E_ELEM_TEXT31,E_ELEM_TITLE_TXT,E_ELEM_TOGGLE2
+      ,E_ELEM_KEYPAD_NUM};
 // Must use separate enum for fonts with MAX_FONT at end to use gslc_FontSet.
 enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 //<Enum !End!>
@@ -94,10 +95,10 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 #define MAX_ELEM_PG_POPUP_NOTIFY 3 // # Elems total on page
 #define MAX_ELEM_PG_POPUP_NOTIFY_RAM MAX_ELEM_PG_POPUP_NOTIFY // # Elems in RAM
 
-#define MAX_ELEM_PG_SUM 1 // # Elems total on page
+#define MAX_ELEM_PG_SUM 4 // # Elems total on page
 #define MAX_ELEM_PG_SUM_RAM MAX_ELEM_PG_SUM // # Elems in RAM
 
-#define MAX_ELEM_PG_STNG 14 // # Elems total on page
+#define MAX_ELEM_PG_STNG 12 // # Elems total on page
 #define MAX_ELEM_PG_STNG_RAM MAX_ELEM_PG_STNG // # Elems in RAM
 //<ElementDefines !End!>
 
@@ -141,22 +142,23 @@ gslc_tsXCheckbox                m_asXCheck2;
 //<Extern_References !Start!>
 extern gslc_tsElemRef* btnOther;
 extern gslc_tsElemRef* btnSettings;
-extern gslc_tsElemRef* btnStngNext13;
-extern gslc_tsElemRef* btnStngPrev14;
 extern gslc_tsElemRef* btnSummary;
 extern gslc_tsElemRef* clockTxt;
 extern gslc_tsElemRef* desiredTemp;
 extern gslc_tsElemRef* noHeaterCB;
 extern gslc_tsElemRef* phGauge;
 extern gslc_tsElemRef* phLoHiTxt;
+extern gslc_tsElemRef* phSumBtn;
 extern gslc_tsElemRef* phUnitTxt;
 extern gslc_tsElemRef* settingsTempUnitTxt;
 extern gslc_tsElemRef* statusbarText;
 extern gslc_tsElemRef* tdsGauge;
 extern gslc_tsElemRef* tdsLoHiTxt;
+extern gslc_tsElemRef* tdsSumBtn;
 extern gslc_tsElemRef* tdsUnitTxt;
 extern gslc_tsElemRef* tempGauge;
 extern gslc_tsElemRef* tempLoHiTxt;
+extern gslc_tsElemRef* tempSumBtn;
 extern gslc_tsElemRef* tempUnitToggle;
 extern gslc_tsElemRef* tempUnitTxt;
 extern gslc_tsElemRef* m_pElemKeyPadNum;
@@ -220,9 +222,9 @@ void InitGUIslice_gen()
   
   
   // Create E_ELEM_CLOCK_TXT runtime modifiable text
-  static char m_sDisplayText18[41] = "Clock";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_CLOCK_TXT,E_PG_BASE,(gslc_tsRect){119,10,241,10},
-    (char*)m_sDisplayText18,41,E_BUILTIN5X8);
+  static char m_sDisplayText18[31] = "Clock";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_CLOCK_TXT,E_PG_BASE,(gslc_tsRect){149,10,181,10},
+    (char*)m_sDisplayText18,31,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   clockTxt = pElemRef;
@@ -236,7 +238,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEAMNAME_TXT text label
   pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEAMNAME_TXT,E_PG_BASE,(gslc_tsRect){385,10,85,10},
-    (char*)"Fish Tank v0.1",0,E_BUILTIN5X8);
+    (char*)"Fish Tank v0.2",0,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_RIGHT);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
 
@@ -276,7 +278,7 @@ void InitGUIslice_gen()
   // Create E_ELEM_BTN2 button with modifiable text label
   static char m_strbtn2[11] = "Summary";
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN2,E_PG_MAIN,
-    (gslc_tsRect){190,240,100,40},
+    (gslc_tsRect){165,260,150,50},
     (char*)m_strbtn2,11,E_BUILTIN5X8,&CbBtnCommon);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
@@ -287,7 +289,7 @@ void InitGUIslice_gen()
   // Create E_ELEM_BTN_STNGS button with modifiable text label
   static char m_strbtn3[11] = "Options";
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_STNGS,E_PG_MAIN,
-    (gslc_tsRect){310,240,100,40},
+    (gslc_tsRect){320,260,150,50},
     (char*)m_strbtn3,11,E_BUILTIN5X8,&CbBtnCommon);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
@@ -296,9 +298,9 @@ void InitGUIslice_gen()
   btnSettings = pElemRef;
   
   // Create E_ELEM_BTN4 button with modifiable text label
-  static char m_strbtn4[11] = "?";
+  static char m_strbtn4[11] = "-";
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN4,E_PG_MAIN,
-    (gslc_tsRect){70,240,100,40},
+    (gslc_tsRect){10,260,150,50},
     (char*)m_strbtn4,11,E_BUILTIN5X8,&CbBtnCommon);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
@@ -396,10 +398,31 @@ void InitGUIslice_gen()
   
   // create E_ELEM_BTN_HOME1 button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_HOME1,E_PG_SUM,
-    (gslc_tsRect){190,270,100,40},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+    (gslc_tsRect){358,260,110,50},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_RED_LT4,GSLC_COL_RED_LT4,GSLC_COL_RED_LT2);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
+  
+  // create E_ELEM_BTN_TEMPSUM button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_TEMPSUM,E_PG_SUM,
+    (gslc_tsRect){13,260,110,50},(char*)"Temperature",0,E_BUILTIN5X8,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  tempSumBtn = pElemRef;
+  
+  // create E_ELEM_BTN_TDSSUM button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_TDSSUM,E_PG_SUM,
+    (gslc_tsRect){128,260,110,50},(char*)"TDS",0,E_BUILTIN5X8,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  tdsSumBtn = pElemRef;
+  
+  // create E_ELEM_BTN_PHSUM button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_PHSUM,E_PG_SUM,
+    (gslc_tsRect){243,260,110,50},(char*)"pH",0,E_BUILTIN5X8,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  phSumBtn = pElemRef;
 
   // -----------------------------------
   // PAGE: E_PG_STNG
@@ -418,7 +441,7 @@ void InitGUIslice_gen()
   
   // create E_ELEM_BTN_HOME2 button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_HOME2,E_PG_STNG,
-    (gslc_tsRect){190,260,100,40},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
+    (gslc_tsRect){10,260,460,50},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
@@ -441,22 +464,6 @@ void InitGUIslice_gen()
   // Create E_DRAW_LINE5 line 
   pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE5,E_PG_STNG,40,130,440,130);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_GRAY_DK2,GSLC_COL_GRAY_DK2);
-  
-  // create E_ELEM_BTN13 button with text label
-  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN13,E_PG_STNG,
-    (gslc_tsRect){310,260,80,40},(char*)">",0,E_BUILTIN5X8,&CbBtnCommon);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
-  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
-  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
-  btnStngNext13 = pElemRef;
-  
-  // create E_ELEM_BTN14 button with text label
-  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN14,E_PG_STNG,
-    (gslc_tsRect){90,260,80,40},(char*)"<",0,E_BUILTIN5X8,&CbBtnCommon);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
-  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
-  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
-  btnStngPrev14 = pElemRef;
   
   // Create E_ELEM_NUMINPUT1 numeric input field
   static char m_sInputNumber1[3] = "00";
