@@ -60,8 +60,8 @@ enum {E_DRAW_LINE4,E_DRAW_LINE5,E_ELEM_BOX2,E_ELEM_BTN2,E_ELEM_BTN4
       ,E_ELEM_TEAMNAME_TXT,E_ELEM_TEMPGAUGE,E_ELEM_TEMPUNIT_TEXT
       ,E_ELEM_TEXT11,E_ELEM_TEXT14,E_ELEM_TEXT17,E_ELEM_TEXT26
       ,E_ELEM_TEXT27,E_ELEM_TEXT28,E_ELEM_TEXT29,E_ELEM_TEXT3
-      ,E_ELEM_TEXT30,E_ELEM_TEXT31,E_ELEM_TITLE_TXT,E_ELEM_TOGGLE2
-      ,E_ELEM_KEYPAD_NUM};
+      ,E_ELEM_TEXT30,E_ELEM_TEXT31,E_ELEM_TEXT32,E_ELEM_TITLE_TXT
+      ,E_ELEM_TOGGLE2,E_ELEM_KEYPAD_NUM};
 // Must use separate enum for fonts with MAX_FONT at end to use gslc_FontSet.
 enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 //<Enum !End!>
@@ -95,7 +95,7 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 #define MAX_ELEM_PG_POPUP_NOTIFY 3 // # Elems total on page
 #define MAX_ELEM_PG_POPUP_NOTIFY_RAM MAX_ELEM_PG_POPUP_NOTIFY // # Elems in RAM
 
-#define MAX_ELEM_PG_SUM 4 // # Elems total on page
+#define MAX_ELEM_PG_SUM 5 // # Elems total on page
 #define MAX_ELEM_PG_SUM_RAM MAX_ELEM_PG_SUM // # Elems in RAM
 
 #define MAX_ELEM_PG_STNG 12 // # Elems total on page
@@ -249,11 +249,11 @@ void InitGUIslice_gen()
   // Create ring gauge E_ELEM_TEMPGAUGE 
   static char m_sRingText1[11] = "";
   pElemRef = gslc_ElemXRingGaugeCreate(&m_gui,E_ELEM_TEMPGAUGE,E_PG_MAIN,&m_sXRingGauge1,
-          (gslc_tsRect){170,44,140,140},
+          (gslc_tsRect){165,50,150,150},
           (char*)m_sRingText1,11,E_BUILTIN5X8);
   gslc_ElemXRingGaugeSetValRange(&m_gui, pElemRef, 0, 100);
   gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, 80); // Set initial value
-  gslc_ElemXRingGaugeSetThickness(&m_gui,pElemRef, 15);
+  gslc_ElemXRingGaugeSetThickness(&m_gui,pElemRef, 20);
   gslc_ElemXRingGaugeSetAngleRange(&m_gui,pElemRef, -135, 270, true);
   gslc_ElemXRingGaugeSetColorActiveGradient(&m_gui, pElemRef, GSLC_COL_BLUE_LT4, GSLC_COL_RED_LT4);
   gslc_ElemXRingGaugeSetColorInactive(&m_gui,pElemRef, ((gslc_tsColor){20,20,20}));
@@ -261,25 +261,25 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEMPUNIT_TEXT modifiable text using flash API
   static char m_sDisplayText2[6] = "F";
-  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_TEMPUNIT_TEXT,E_PG_MAIN,224,138,31,10,
+  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_TEMPUNIT_TEXT,E_PG_MAIN,224,149,31,10,
     m_sDisplayText2,6,&m_asFont[E_BUILTIN5X8],
-    GSLC_COL_GRAY_LT2,GSLC_COL_GRAY_LT2,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
+    GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
     false,true,false,false,NULL,NULL,NULL,NULL);
   tempUnitTxt = gslc_PageFindElemById(&m_gui,E_PG_MAIN,E_ELEM_TEMPUNIT_TEXT);
   
   // Create E_ELEM_TEXT3 runtime modifiable text
   static char m_sDisplayText3[16] = "lo/hi";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT3,E_PG_MAIN,(gslc_tsRect){194,83,91,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT3,E_PG_MAIN,(gslc_tsRect){194,94,91,10},
     (char*)m_sDisplayText3,16,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
-  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_GRAY_LT2);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4);
   tempLoHiTxt = pElemRef;
   
   // Create E_ELEM_BTN2 button with modifiable text label
   static char m_strbtn2[11] = "Summary";
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN2,E_PG_MAIN,
-    (gslc_tsRect){165,260,150,50},
-    (char*)m_strbtn2,11,E_BUILTIN5X8,&CbBtnCommon);
+    (gslc_tsRect){165,250,150,60},
+    (char*)m_strbtn2,11,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
@@ -289,8 +289,8 @@ void InitGUIslice_gen()
   // Create E_ELEM_BTN_STNGS button with modifiable text label
   static char m_strbtn3[11] = "Options";
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_STNGS,E_PG_MAIN,
-    (gslc_tsRect){320,260,150,50},
-    (char*)m_strbtn3,11,E_BUILTIN5X8,&CbBtnCommon);
+    (gslc_tsRect){320,250,150,60},
+    (char*)m_strbtn3,11,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
@@ -298,12 +298,12 @@ void InitGUIslice_gen()
   btnSettings = pElemRef;
   
   // Create E_ELEM_BTN4 button with modifiable text label
-  static char m_strbtn4[11] = "-";
+  static char m_strbtn4[11] = "Heater";
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN4,E_PG_MAIN,
-    (gslc_tsRect){10,260,150,50},
-    (char*)m_strbtn4,11,E_BUILTIN5X8,&CbBtnCommon);
+    (gslc_tsRect){10,250,150,60},
+    (char*)m_strbtn4,11,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_RED_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
   btnOther = pElemRef;
@@ -311,11 +311,11 @@ void InitGUIslice_gen()
   // Create ring gauge E_ELEM_PHGAUGE 
   static char m_sRingText2[11] = "";
   pElemRef = gslc_ElemXRingGaugeCreate(&m_gui,E_ELEM_PHGAUGE,E_PG_MAIN,&m_sXRingGauge2,
-          (gslc_tsRect){320,45,140,140},
+          (gslc_tsRect){325,50,150,150},
           (char*)m_sRingText2,11,E_BUILTIN5X8);
   gslc_ElemXRingGaugeSetValRange(&m_gui, pElemRef, 0, 100);
   gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, 80); // Set initial value
-  gslc_ElemXRingGaugeSetThickness(&m_gui,pElemRef, 15);
+  gslc_ElemXRingGaugeSetThickness(&m_gui,pElemRef, 20);
   gslc_ElemXRingGaugeSetAngleRange(&m_gui,pElemRef, -135, 270, true);
   gslc_ElemXRingGaugeSetColorActiveGradient(&m_gui, pElemRef, GSLC_COL_BLUE_LT4, GSLC_COL_RED_LT4);
   gslc_ElemXRingGaugeSetColorInactive(&m_gui,pElemRef, ((gslc_tsColor){20,20,20}));
@@ -323,28 +323,28 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_PHUNIT_TEXT modifiable text using flash API
   static char m_sDisplayText10[6] = "pH";
-  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_PHUNIT_TEXT,E_PG_MAIN,374,138,31,10,
+  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_PHUNIT_TEXT,E_PG_MAIN,384,149,31,10,
     m_sDisplayText10,6,&m_asFont[E_BUILTIN5X8],
-    GSLC_COL_GRAY_LT2,GSLC_COL_GRAY_LT2,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
+    GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
     false,true,false,false,NULL,NULL,NULL,NULL);
   phUnitTxt = gslc_PageFindElemById(&m_gui,E_PG_MAIN,E_ELEM_PHUNIT_TEXT);
   
   // Create E_ELEM_TEXT11 runtime modifiable text
   static char m_sDisplayText11[16] = "lo/hi";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT11,E_PG_MAIN,(gslc_tsRect){344,83,91,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT11,E_PG_MAIN,(gslc_tsRect){354,94,91,10},
     (char*)m_sDisplayText11,16,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
-  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_GRAY_LT2);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4);
   phLoHiTxt = pElemRef;
 
   // Create ring gauge E_ELEM_TDSGAUGE 
   static char m_sRingText3[11] = "";
   pElemRef = gslc_ElemXRingGaugeCreate(&m_gui,E_ELEM_TDSGAUGE,E_PG_MAIN,&m_sXRingGauge3,
-          (gslc_tsRect){20,44,140,140},
+          (gslc_tsRect){5,50,150,150},
           (char*)m_sRingText3,11,E_BUILTIN5X8);
   gslc_ElemXRingGaugeSetValRange(&m_gui, pElemRef, 0, 100);
   gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, 80); // Set initial value
-  gslc_ElemXRingGaugeSetThickness(&m_gui,pElemRef, 15);
+  gslc_ElemXRingGaugeSetThickness(&m_gui,pElemRef, 20);
   gslc_ElemXRingGaugeSetAngleRange(&m_gui,pElemRef, -135, 270, true);
   gslc_ElemXRingGaugeSetColorActiveGradient(&m_gui, pElemRef, GSLC_COL_BLUE_LT4, GSLC_COL_RED_LT4);
   gslc_ElemXRingGaugeSetColorInactive(&m_gui,pElemRef, ((gslc_tsColor){20,20,20}));
@@ -352,18 +352,18 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TDSUNIT_TEXT modifiable text using flash API
   static char m_sDisplayText13[6] = "ppm";
-  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_TDSUNIT_TEXT,E_PG_MAIN,75,138,31,10,
+  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_TDSUNIT_TEXT,E_PG_MAIN,64,149,31,10,
     m_sDisplayText13,6,&m_asFont[E_BUILTIN5X8],
-    GSLC_COL_GRAY_LT2,GSLC_COL_GRAY_LT2,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
+    GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
     false,true,false,false,NULL,NULL,NULL,NULL);
   tdsUnitTxt = gslc_PageFindElemById(&m_gui,E_PG_MAIN,E_ELEM_TDSUNIT_TEXT);
   
   // Create E_ELEM_TEXT14 runtime modifiable text
   static char m_sDisplayText14[16] = "lo/hi";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT14,E_PG_MAIN,(gslc_tsRect){45,83,91,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT14,E_PG_MAIN,(gslc_tsRect){34,94,91,10},
     (char*)m_sDisplayText14,16,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
-  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_GRAY_LT2);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4);
   tdsLoHiTxt = pElemRef;
 
   // -----------------------------------
@@ -398,76 +398,82 @@ void InitGUIslice_gen()
   
   // create E_ELEM_BTN_HOME1 button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_HOME1,E_PG_SUM,
-    (gslc_tsRect){358,260,110,50},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
+    (gslc_tsRect){358,250,110,60},(char*)"Home",0,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_RED_LT4,GSLC_COL_RED_LT4,GSLC_COL_RED_LT2);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
   
   // create E_ELEM_BTN_TEMPSUM button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_TEMPSUM,E_PG_SUM,
-    (gslc_tsRect){13,260,110,50},(char*)"Temperature",0,E_BUILTIN5X8,&CbBtnCommon);
+    (gslc_tsRect){13,250,110,60},(char*)"Temp",0,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   tempSumBtn = pElemRef;
   
   // create E_ELEM_BTN_TDSSUM button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_TDSSUM,E_PG_SUM,
-    (gslc_tsRect){128,260,110,50},(char*)"TDS",0,E_BUILTIN5X8,&CbBtnCommon);
+    (gslc_tsRect){128,250,110,60},(char*)"TDS",0,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   tdsSumBtn = pElemRef;
   
   // create E_ELEM_BTN_PHSUM button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_PHSUM,E_PG_SUM,
-    (gslc_tsRect){243,260,110,50},(char*)"pH",0,E_BUILTIN5X8,&CbBtnCommon);
+    (gslc_tsRect){243,250,110,60},(char*)"pH",0,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   phSumBtn = pElemRef;
+  
+  // Create E_ELEM_TEXT32 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT32,E_PG_SUM,(gslc_tsRect){152,130,175,10},
+    (char*)"Drawing graph, please wait...",0,E_BUILTIN5X8);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_GRAY);
 
   // -----------------------------------
   // PAGE: E_PG_STNG
   
   
   // Create E_ELEM_TEXT26 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT26,E_PG_STNG,(gslc_tsRect){50,50,139,10},
-    (char*)"Set Desired Temperature",0,E_BUILTIN5X8);
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT26,E_PG_STNG,(gslc_tsRect){20,50,277,18},
+    (char*)"Set Desired Temperature",0,E_BUILTIN10X16);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   
   // Create toggle button E_ELEM_TOGGLE2
   pElemRef = gslc_ElemXTogglebtnCreate(&m_gui,E_ELEM_TOGGLE2,E_PG_STNG,&m_asXToggle2,
-    (gslc_tsRect){349,140,49,25},GSLC_COL_WHITE,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY_DK3,
+    (gslc_tsRect){364,185,50,30},GSLC_COL_WHITE,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY_DK3,
     true,true,&CbBtnCommon);
   tempUnitToggle = pElemRef;
   
   // create E_ELEM_BTN_HOME2 button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_HOME2,E_PG_STNG,
-    (gslc_tsRect){10,260,460,50},(char*)"Home",0,E_BUILTIN5X8,&CbBtnCommon);
+    (gslc_tsRect){10,250,460,60},(char*)"Home",0,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
    
   // create checkbox E_ELEM_CHECK2
   pElemRef = gslc_ElemXCheckboxCreate(&m_gui,E_ELEM_CHECK2,E_PG_STNG,&m_asXCheck2,
-    (gslc_tsRect){360,90,30,30},false,GSLCX_CHECKBOX_STYLE_ROUND,GSLC_COL_BLUE_LT4,false);
+    (gslc_tsRect){370,110,40,40},false,GSLCX_CHECKBOX_STYLE_BOX,GSLC_COL_BLUE_LT4,false);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_GRAY_DK1,GSLC_COL_BLACK,GSLC_COL_BLACK);
   noHeaterCB = pElemRef;
   
   // Create E_ELEM_TEXT27 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT27,E_PG_STNG,(gslc_tsRect){50,100,205,10},
-    (char*)"Override Heater (Turns Heater Off)",0,E_BUILTIN5X8);
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT27,E_PG_STNG,(gslc_tsRect){20,120,253,18},
+    (char*)"Override Heater (OFF)",0,E_BUILTIN10X16);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
 
   // Create E_DRAW_LINE4 line 
-  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE4,E_PG_STNG,40,80,440,80);
+  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE4,E_PG_STNG,15,90,465,90);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_GRAY_DK2,GSLC_COL_GRAY_DK2);
 
   // Create E_DRAW_LINE5 line 
-  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE5,E_PG_STNG,40,130,440,130);
+  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE5,E_PG_STNG,15,170,465,170);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_GRAY_DK2,GSLC_COL_GRAY_DK2);
   
   // Create E_ELEM_NUMINPUT1 numeric input field
   static char m_sInputNumber1[3] = "00";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_NUMINPUT1,E_PG_STNG,(gslc_tsRect){350,40,50,30},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_NUMINPUT1,E_PG_STNG,(gslc_tsRect){365,40,50,40},
     (char*)m_sInputNumber1,3,E_BUILTIN10X16);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,5);
@@ -481,24 +487,24 @@ void InitGUIslice_gen()
   gslc_ElemSetTxtEnc(&m_gui,pElemRef,GSLC_TXT_ENC_UTF8);
   
   // Create E_ELEM_TEXT28 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT28,E_PG_STNG,(gslc_tsRect){50,150,121,10},
-    (char*)"Set Temperature Unit",0,E_BUILTIN5X8);
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT28,E_PG_STNG,(gslc_tsRect){20,190,241,18},
+    (char*)"Set Temperature Unit",0,E_BUILTIN10X16);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   
   // Create E_ELEM_TEXT29 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT29,E_PG_STNG,(gslc_tsRect){408,143,37,18},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT29,E_PG_STNG,(gslc_tsRect){423,190,37,18},
     (char*)"\xf7\F",0,E_BUILTIN10X16);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   
   // Create E_ELEM_TEXT30 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT30,E_PG_STNG,(gslc_tsRect){302,143,37,18},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT30,E_PG_STNG,(gslc_tsRect){317,190,37,18},
     (char*)"\xf7\C",0,E_BUILTIN10X16);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_RIGHT);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   
   // Create E_ELEM_TEXT31 runtime modifiable text
   static char m_sDisplayText31[4] = "\xf7F";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT31,E_PG_STNG,(gslc_tsRect){405,45,37,18},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT31,E_PG_STNG,(gslc_tsRect){425,50,37,18},
     (char*)m_sDisplayText31,4,E_BUILTIN10X16);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   settingsTempUnitTxt = pElemRef;

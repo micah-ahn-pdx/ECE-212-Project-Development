@@ -22,43 +22,39 @@
 #include "time.h"
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include "ph_grav.h"   
+#include "ph_grav.h"
+#include <AsyncDelay.h>
 
-// * 
+// *** VARIABLES *** //
 #define RELAY_PIN   13	  	// Relay pin
-#define TEMP_SENSOR 4			  // Temp sensor pin
-#define TDS_SENSOR  39			// TDS Sensor pin
+#define TEMP_SENSOR 23      // Temp sensor pin
+#define TDS_SENSOR  38			// TDS Sensor pin
+#define PH_SENSOR   A2      // pH sensor pin
 
 #define VREF        3.3     // [TDS] analog reference voltage(Volt) of the ADC
 #define SCOUNT      30      // [TDS] sum of sample point
-#define ONE_HOUR            60*60*1000L	    // 1 Hour
-#define LOOP_UPDATE_DELAY   5*1000L         // 5 Seconds
 
+// WiFi Setup
+#define SSID "01001101"
+#define SSID_PWD "0x01001101"
 #define SMTP_HOST "smtp.gmail.com"                      // Mail Server name
 #define SMTP_PORT 465                                   // Use Port 465 for Gmail
 #define AUTHOR_EMAIL "PSU.FishTankMonitor@gmail.com"    // Email sender credentials
 #define AUTHOR_PASSWORD "PortlandState"                 // Sending email password
-
 /* Recipient's email*/
 #define RECIPIENT_EMAIL "enter email here"
-
 /* The SMTP Session object used for Email sending */
 SMTPSession smtp;
 
-Gravity_pH pH = Gravity_pH(A2);   // pH sensor pin assign
-
-// * Starting Variables
 // loop update variable
 unsigned long loopTime = 0L;
-
-// WiFi Setup
-const char* ssid = "01001101";
-const char* pwd = "0x01001101";
+AsyncDelay mainDelay(15000, AsyncDelay::MILLIS);  // main loop delay (15 seconds)
+AsyncDelay graphDelay(100, AsyncDelay::MILLIS);   // very small delay before drawing the graph (so it won't overlap with the home page)
 
 // Getting Time
-const char* ntpServer = "pool.ntp.org";
-const long  gmtOffset_sec = -28800;   // GMT offset (seconds)
-const int   daylightOffset_sec = 3600;  // daylight offset (seconds)
+#define NTP_SERVER      "pool.ntp.org"  // time protocol server
+#define GMT_OFFSET      -28800          // GMT offset (seconds)
+#define DAYLIGHT_OFFSET 3600            // daylight offset (seconds)
 struct tm timeinfo;
 int curHr = -1, prevHr = -1;
 
@@ -74,9 +70,10 @@ int analogBufferIndex = 0, copyIndex = 0;
 float averageVoltage = 0, tdsValue = 0, tdsLo = 999, tdsHi = -999;
 
 // pH
-uint8_t user_bytes_received = 0;                
-const uint8_t bufferlen = 32;                   
-char user_data[bufferlen]; 
+Gravity_pH pH = Gravity_pH(PH_SENSOR);
+uint8_t user_bytes_received = 0;
+const uint8_t bufferlen = 32;
+char user_data[bufferlen];
 
 // Graph variables
 boolean redrawGraph = true;
@@ -91,8 +88,8 @@ typedef struct logNode // struct that holds all the logging stuff
   int curIndex = -1, startIndex = -1, selectedSum = 0;
   boolean isFull = false;
 } logNode;
-
-logNode dataLog; // Initiate dataLog where we'll store the past 24hrs readings
+// Initiate dataLog where we'll store the past 24hrs readings
+logNode dataLog; 
 
 
 
@@ -149,7 +146,7 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
         gslc_SetPageCur(&m_gui, E_PG_SUM);
         gslc_ElemSetTxtStr(&m_gui, statusbarText, "Summary");
         redrawGraph = true;
-        handleGraphUpdate();
+        graphDelay.restart();
         break;
       case E_ELEM_BTN_STNGS:
         gslc_ElemSetTxtStr(&m_gui, statusbarText, "Settings");
@@ -271,57 +268,12 @@ bool CbTickScanner(void* pvGui,void* pvScope)
 
 void setup()
 {
-  // ------------------------------------------------
-  // Initialize
-  // ------------------------------------------------
-  Serial.begin(void parse_cmd(char* string) {                   
-  strupr(string);                                
-  if (strcmp(string, "CAL,7") == 0) {       
-    pH.cal_mid();                                
-    Serial.println("MID CALIBRATED");
-  }
-  else if (strcmp(string, "CAL,4") == 0) {            
-    pH.cal_low();                                
-    Serial.println("LOW CALIBRATED");
-  }
-  else if (strcmp(string, "CAL,10") == 0) {      
-    pH.cal_high();                               
-    Serial.println("HIGH CALIBRATED");
-  }
-  else if (strcmp(string, "CAL,CLEAR") == 0) { 
-    pH.cal_clear();                              
-    Serial.println("CALIBRATION CLEARED");
-  }
-}
-
-void calibrate() {
-  Serial.begin(115200);                            
-  delay(200);
-  Serial.println(F("Use commands \"CAL,7\", \"CAL,4\", and \"CAL,10\" to calibrate the circuit to those respective values"));
-  Serial.println(F("Use command \"CAL,CLEAR\" to clear the calibration"));
-  if (pH.begin()) {                                     
-    Serial.println("Loaded EEPROM");
-  }
-}
-
-void loop() {
-  if (Serial.available() > 0) {                                                      
-    user_bytes_received = Serial.readBytesUntil(13, user_data, sizeof(user_data));   
-  }
-
-  if (user_bytes_received) {                                                      
-    parse_cmd(user_data);                                                          
-    user_bytes_received = 0;                                                        
-    memset(user_data, 0, sizeof(user_data));                                         
-  }
-  
-  Serial.println(pH.read_ph());                                                      
-  delay(1000);
-});
+  // * SETUP
+  Serial.begin(115200);
 
   //connect to WiFi
-  Serial.printf("Connecting to %s ", ssid);
-  WiFi.begin(ssid, pwd);
+  Serial.printf("Connecting to %s ", SSID);
+  WiFi.begin(SSID, SSID_PWD);
   while (WiFi.status() != WL_CONNECTED) {
 	delay(500);
 	Serial.print(".");
@@ -329,16 +281,22 @@ void loop() {
   Serial.println("CONNECTED to WIFI");
 
   // Get local time from ntp server via WiFi
-  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  configTime(GMT_OFFSET, DAYLIGHT_OFFSET, NTP_SERVER);
 	getLocalTime(&timeinfo);
   dataLog.startIndex = timeinfo.tm_min%24; // Get the current hour (when the device is first turned on)
+
+  Serial.print("ESP Board MAC Address:  ");
+  Serial.println(WiFi.macAddress());
 
   // Disconnect WiFi
    WiFi.disconnect(true);
    WiFi.mode(WIFI_OFF);
 
 	pinMode(TDS_SENSOR, INPUT); // set TDS sensor
-  tempSensor.begin(); // start temp sensor
+  tempSensor.begin();         // start temp sensor
+
+	// Initialize Relay pin as an output
+	pinMode(RELAY_PIN, OUTPUT);
 
   // Create graphic elements
   InitGUIslice_gen();
@@ -347,22 +305,24 @@ void loop() {
 	// Initial Setup
   initSetup();
 
-	// Initialize Relay pin as an output
-	pinMode(RELAY_PIN, OUTPUT);
 }
 
-// -----------------------------------
-// Main event loop
-// -----------------------------------
+// * Main program loop
 void loop()
 {
+  getLocalTime(&timeinfo); // Update time
 
-	if (millis() - loopTime >= LOOP_UPDATE_DELAY) // Update what's inside every 5 seconds (without interrupting the GUI from updating).
+	if (mainDelay.isExpired()) // Update what's inside every 15 seconds (without interrupting the GUI from updating).
 	{
-		loopTime += LOOP_UPDATE_DELAY; // Update loopTime
+    mainDelay.repeat();
 
     // main sensors func
     testSensors();
+
+    logData(); // Logs data every 1hr
+
+    // Draws the graph when the user is in the summary page
+    handleGraphUpdate();
 
     // * Debug stuff: 
 		// Get temp
@@ -374,27 +334,23 @@ void loop()
 		Serial.print(tdsValue, 0);
 		Serial.print("ppm // ");
 		Serial.print("Temperature: ");
-		Serial.print(tempC);
+		Serial.print(tempSensor.getTempCByIndex(0));
 		Serial.println("ºC");
 		
 	} // End of 5sec update delay
 
+  // Trigger drawing graph (when summary button is pressed)
+  if (redrawGraph && graphDelay.isExpired()) handleGraphUpdate();
+
 	// Get current time and print it on screen
-	getLocalTime(&timeinfo); // Update time
-	char clock[26];
-	strftime(clock, 26, "%I:%M:%S%p %m/%d/%y", &timeinfo); // Format time
-	gslc_ElemSetTxtStr(&m_gui, clockTxt, clock);				 // Update sreen text		
+  char clock[26];
+	strftime(clock, 26, "%I:%M:%S%p %m/%d/%y", &timeinfo);  // Format time
+	gslc_ElemSetTxtStr(&m_gui, clockTxt, clock);				    // Update sreen text
 
-	gslc_Update(&m_gui); // Periodically call GUIslice update function
-
-  logData(); // Logs data every 1hr
-
-  // Draws the graph when the user is in the summary page
-  handleGraphUpdate();
-    
+  // Periodically call GUIslice update function
+	gslc_Update(&m_gui);   
 
 } // End of loop
-
 
 
 /**
@@ -410,7 +366,6 @@ void testSensors()
 
   if (tempC < tempLo) tempLo = tempC;
   if (tempC > tempHi) tempHi = tempC;
-  
   
   if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle))
   { // display temp in F
@@ -428,14 +383,12 @@ void testSensors()
   
   if (tdsValue <= 0) updateGauge(tdsGauge, tdsLoHiTxt, -1, tdsLo, tdsHi);
   else updateGauge(tdsGauge, tdsLoHiTxt, tdsValue, tdsLo, tdsHi);
-  
 
 
   // * pH
   // TODO: implement pH update function & display results on screen
   updateGauge(phGauge, phLoHiTxt, 23, 20, 24);
   
-
 }
 
 /**
@@ -460,6 +413,7 @@ void initSetup()
   gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char*)"\xf7""F");
 
   testSensors();
+  mainDelay.expire(); // When the app first starts, expire the main loop timer so the code executes immediately
 
 }
 
@@ -503,7 +457,6 @@ void getTDSVal()
  */
 void setTxtStyle(gslc_tsElemRef *pElemRef, gslc_tsColor colVal, int nFontId)
 {
-
 	gslc_ElemSetTxtCol(&m_gui, pElemRef, colVal);
 	gslc_ElemUpdateFont(&m_gui, pElemRef, nFontId);
 }
@@ -586,7 +539,6 @@ void handleTempUnitToggle()
     gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char *)"\xf7""C");
     gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char *)"\xf7""C");
   }
-
   testSensors();
 }
 
@@ -630,7 +582,7 @@ void SendEmail(int tdsValue, int temperature){
   Serial.begin(115200);
   Serial.println();
   Serial.print("Connecting to AP");
-  WiFi.begin(ssid, pwd);
+  WiFi.begin(SSID, SSID_PWD);
   while (WiFi.status() != WL_CONNECTED){
     Serial.print(".");
     delay(200);
@@ -849,12 +801,12 @@ void logData()
 
 
 void handleGraphUpdate() {
-  if (gslc_GetPageCur(&m_gui) == E_PG_SUM) { // Only draw/update if the user is in the summary page
+  if (gslc_GetPageCur(&m_gui) == E_PG_SUM) // Only draw/update if the user is in the summary page & every 1s
+  { 
 
-    double gx = 40, gy = 220, gw = 420, gh = 180;    
+    double gx = 40, gy = 210, gw = 420, gh = 170;
     int x, y; // needed variables for the plot
     int iCap = (dataLog.isFull) ? 23 : dataLog.curIndex - dataLog.startIndex; // How many x data to plot is determined by how many hours passed if the log isn't full yet, and if it's full it's always 24(with the 0).
-    gslc_tsElemRef* pElemRef = NULL; // pointer reference to elements
 
     for (int i = 0; i <= iCap; i++) 
     {
@@ -917,7 +869,7 @@ void handleGraphUpdate() {
   }
 }
 
-void parse_cmd(char* string) {                   
+void parse_cmd(char* string) {
   strupr(string);                                
   if (strcmp(string, "CAL,7") == 0) {       
     pH.cal_mid();                                
