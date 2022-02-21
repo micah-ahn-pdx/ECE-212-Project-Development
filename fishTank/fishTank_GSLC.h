@@ -51,17 +51,22 @@
 // ------------------------------------------------
 //<Enum !Start!>
 enum {E_PG_BASE,E_PG_MAIN,E_PG_POPUP_NOTIFY,E_PG_SUM,E_PG_STNG
-      ,E_POP_KEYPAD_NUM};
-enum {E_DRAW_LINE4,E_DRAW_LINE5,E_ELEM_BOX2,E_ELEM_BTN2,E_ELEM_BTN4
-      ,E_ELEM_BTN7,E_ELEM_BTN_HOME1,E_ELEM_BTN_HOME2,E_ELEM_BTN_PHSUM
-      ,E_ELEM_BTN_STNGS,E_ELEM_BTN_TDSSUM,E_ELEM_BTN_TEMPSUM
-      ,E_ELEM_CHECK2,E_ELEM_CLOCK_TXT,E_ELEM_NUMINPUT1,E_ELEM_PHGAUGE
-      ,E_ELEM_PHUNIT_TEXT,E_ELEM_TDSGAUGE,E_ELEM_TDSUNIT_TEXT
-      ,E_ELEM_TEAMNAME_TXT,E_ELEM_TEMPGAUGE,E_ELEM_TEMPUNIT_TEXT
-      ,E_ELEM_TEXT11,E_ELEM_TEXT14,E_ELEM_TEXT17,E_ELEM_TEXT26
-      ,E_ELEM_TEXT27,E_ELEM_TEXT28,E_ELEM_TEXT29,E_ELEM_TEXT3
-      ,E_ELEM_TEXT30,E_ELEM_TEXT31,E_ELEM_TEXT32,E_ELEM_TITLE_TXT
-      ,E_ELEM_TOGGLE2,E_ELEM_KEYPAD_NUM};
+      ,E_PG_CALPH,E_POP_KEYPAD_NUM};
+enum {E_DRAW_LINE_STNG1,E_DRAW_LINE_STNG2,E_ELEM_BOX2,E_ELEM_BOX3
+      ,E_ELEM_BTN2,E_ELEM_BTN7,E_ELEM_BTN_CALPH_CLR,E_ELEM_BTN_CALPH_HI
+      ,E_ELEM_BTN_CALPH_LO,E_ELEM_BTN_CALPH_MD,E_ELEM_BTN_HOME1
+      ,E_ELEM_BTN_HOME2,E_ELEM_BTN_HOME3,E_ELEM_BTN_PHSUM
+      ,E_ELEM_BTN_STNGS,E_ELEM_BTN_STNG_CALPH,E_ELEM_BTN_TDSSUM
+      ,E_ELEM_BTN_TEMPSUM,E_ELEM_CHECK_NOHEATER,E_ELEM_CLOCK_TXT
+      ,E_ELEM_NUMINPUT_TEMP,E_ELEM_PHGAUGE,E_ELEM_PHUNIT_TEXT
+      ,E_ELEM_TDSGAUGE,E_ELEM_TDSUNIT_TEXT,E_ELEM_TEAMNAME_TXT
+      ,E_ELEM_TEMPGAUGE,E_ELEM_TEMPUNIT_TEXT,E_ELEM_TEXT11
+      ,E_ELEM_TEXT14,E_ELEM_TEXT26,E_ELEM_TEXT27,E_ELEM_TEXT28
+      ,E_ELEM_TEXT29,E_ELEM_TEXT3,E_ELEM_TEXT30,E_ELEM_TEXT32
+      ,E_ELEM_TEXT33,E_ELEM_TEXT34,E_ELEM_TEXT35,E_ELEM_TEXT36
+      ,E_ELEM_TEXT38,E_ELEM_TEXT39,E_ELEM_TEXT40,E_ELEM_TEXT41
+      ,E_ELEM_TEXT42,E_ELEM_TEXT_ALERT_MSG,E_ELEM_TEXT_STNG_DESTEMP
+      ,E_ELEM_TITLE_TXT,E_ELEM_TOGGLE2,E_ELEM_KEYPAD_NUM};
 // Must use separate enum for fonts with MAX_FONT at end to use gslc_FontSet.
 enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 //<Enum !End!>
@@ -74,7 +79,7 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 // Define the maximum number of elements and pages
 // ------------------------------------------------
 //<ElementDefines !Start!>
-#define MAX_PAGE                6
+#define MAX_PAGE                7
 
 #define MAX_ELEM_PG_BASE 3 // # Elems total on page
 #define MAX_ELEM_PG_BASE_RAM MAX_ELEM_PG_BASE // # Elems in RAM
@@ -84,7 +89,7 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 //   number of elements in Flash dependent upon GSLC_USE_PROGMEM
 // - This should allow both Arduino and ARM Cortex to use the same code.
 
-#define MAX_ELEM_PG_MAIN 12 // # Elems total on page
+#define MAX_ELEM_PG_MAIN 15 // # Elems total on page
 #if (GSLC_USE_PROGMEM)
   #define MAX_ELEM_PG_MAIN_PROG 3 // # Elems in Flash
 #else
@@ -92,14 +97,17 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 #endif
 #define MAX_ELEM_PG_MAIN_RAM MAX_ELEM_PG_MAIN - MAX_ELEM_PG_MAIN_PROG 
 
-#define MAX_ELEM_PG_POPUP_NOTIFY 3 // # Elems total on page
+#define MAX_ELEM_PG_POPUP_NOTIFY 5 // # Elems total on page
 #define MAX_ELEM_PG_POPUP_NOTIFY_RAM MAX_ELEM_PG_POPUP_NOTIFY // # Elems in RAM
 
 #define MAX_ELEM_PG_SUM 5 // # Elems total on page
 #define MAX_ELEM_PG_SUM_RAM MAX_ELEM_PG_SUM // # Elems in RAM
 
-#define MAX_ELEM_PG_STNG 12 // # Elems total on page
+#define MAX_ELEM_PG_STNG 13 // # Elems total on page
 #define MAX_ELEM_PG_STNG_RAM MAX_ELEM_PG_STNG // # Elems in RAM
+
+#define MAX_ELEM_PG_CALPH 9 // # Elems total on page
+#define MAX_ELEM_PG_CALPH_RAM MAX_ELEM_PG_CALPH // # Elems in RAM
 //<ElementDefines !End!>
 
 // ------------------------------------------------
@@ -121,6 +129,8 @@ gslc_tsElem                     m_asPage2Elem[MAX_ELEM_PG_SUM_RAM];
 gslc_tsElemRef                  m_asPage2ElemRef[MAX_ELEM_PG_SUM];
 gslc_tsElem                     m_asPage3Elem[MAX_ELEM_PG_STNG_RAM];
 gslc_tsElemRef                  m_asPage3ElemRef[MAX_ELEM_PG_STNG];
+gslc_tsElem                     m_asPage4Elem[MAX_ELEM_PG_CALPH_RAM];
+gslc_tsElemRef                  m_asPage4ElemRef[MAX_ELEM_PG_CALPH];
 gslc_tsElem                     m_asKeypadNumElem[1];
 gslc_tsElemRef                  m_asKeypadNumElemRef[1];
 gslc_tsXKeyPad                  m_sKeyPadNum;
@@ -140,11 +150,14 @@ gslc_tsXCheckbox                m_asXCheck2;
 
 // Element References for direct access
 //<Extern_References !Start!>
-extern gslc_tsElemRef* btnOther;
+extern gslc_tsElemRef* alertMsgTxt;
 extern gslc_tsElemRef* btnSettings;
+extern gslc_tsElemRef* btnSettings25_26;
 extern gslc_tsElemRef* btnSummary;
+extern gslc_tsElemRef* calpHStatTxt;
 extern gslc_tsElemRef* clockTxt;
-extern gslc_tsElemRef* desiredTemp;
+extern gslc_tsElemRef* desiredTempElem;
+extern gslc_tsElemRef* heaterStatTxt;
 extern gslc_tsElemRef* noHeaterCB;
 extern gslc_tsElemRef* phGauge;
 extern gslc_tsElemRef* phLoHiTxt;
@@ -203,6 +216,7 @@ void InitGUIslice_gen()
   gslc_PageAdd(&m_gui,E_PG_POPUP_NOTIFY,m_asPopup2Elem,MAX_ELEM_PG_POPUP_NOTIFY_RAM,m_asPopup2ElemRef,MAX_ELEM_PG_POPUP_NOTIFY);
   gslc_PageAdd(&m_gui,E_PG_SUM,m_asPage2Elem,MAX_ELEM_PG_SUM_RAM,m_asPage2ElemRef,MAX_ELEM_PG_SUM);
   gslc_PageAdd(&m_gui,E_PG_STNG,m_asPage3Elem,MAX_ELEM_PG_STNG_RAM,m_asPage3ElemRef,MAX_ELEM_PG_STNG);
+  gslc_PageAdd(&m_gui,E_PG_CALPH,m_asPage4Elem,MAX_ELEM_PG_CALPH_RAM,m_asPage4ElemRef,MAX_ELEM_PG_CALPH);
   gslc_PageAdd(&m_gui,E_POP_KEYPAD_NUM,m_asKeypadNumElem,1,m_asKeypadNumElemRef,1);  // KeyPad
 
   // Now mark E_PG_BASE as a "base" page which means that it's elements
@@ -238,7 +252,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEAMNAME_TXT text label
   pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEAMNAME_TXT,E_PG_BASE,(gslc_tsRect){385,10,85,10},
-    (char*)"Fish Tank v0.2",0,E_BUILTIN5X8);
+    (char*)"Fish Tank v0.4",0,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_RIGHT);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
 
@@ -249,7 +263,7 @@ void InitGUIslice_gen()
   // Create ring gauge E_ELEM_TEMPGAUGE 
   static char m_sRingText1[11] = "";
   pElemRef = gslc_ElemXRingGaugeCreate(&m_gui,E_ELEM_TEMPGAUGE,E_PG_MAIN,&m_sXRingGauge1,
-          (gslc_tsRect){165,50,150,150},
+          (gslc_tsRect){165,70,150,150},
           (char*)m_sRingText1,11,E_BUILTIN5X8);
   gslc_ElemXRingGaugeSetValRange(&m_gui, pElemRef, 0, 100);
   gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, 80); // Set initial value
@@ -261,7 +275,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEMPUNIT_TEXT modifiable text using flash API
   static char m_sDisplayText2[6] = "F";
-  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_TEMPUNIT_TEXT,E_PG_MAIN,224,149,31,10,
+  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_TEMPUNIT_TEXT,E_PG_MAIN,224,169,31,10,
     m_sDisplayText2,6,&m_asFont[E_BUILTIN5X8],
     GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
     false,true,false,false,NULL,NULL,NULL,NULL);
@@ -269,49 +283,34 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEXT3 runtime modifiable text
   static char m_sDisplayText3[16] = "lo/hi";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT3,E_PG_MAIN,(gslc_tsRect){194,94,91,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT3,E_PG_MAIN,(gslc_tsRect){194,114,91,10},
     (char*)m_sDisplayText3,16,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4);
   tempLoHiTxt = pElemRef;
   
-  // Create E_ELEM_BTN2 button with modifiable text label
-  static char m_strbtn2[11] = "Summary";
+  // create E_ELEM_BTN2 button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN2,E_PG_MAIN,
-    (gslc_tsRect){165,250,150,60},
-    (char*)m_strbtn2,11,E_BUILTIN10X16,&CbBtnCommon);
+    (gslc_tsRect){10,250,225,60},(char*)"Summary",0,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
   btnSummary = pElemRef;
   
-  // Create E_ELEM_BTN_STNGS button with modifiable text label
-  static char m_strbtn3[11] = "Options";
+  // create E_ELEM_BTN_STNGS button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_STNGS,E_PG_MAIN,
-    (gslc_tsRect){320,250,150,60},
-    (char*)m_strbtn3,11,E_BUILTIN10X16,&CbBtnCommon);
+    (gslc_tsRect){245,250,225,60},(char*)"Options",0,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
   btnSettings = pElemRef;
-  
-  // Create E_ELEM_BTN4 button with modifiable text label
-  static char m_strbtn4[11] = "Heater";
-  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN4,E_PG_MAIN,
-    (gslc_tsRect){10,250,150,60},
-    (char*)m_strbtn4,11,E_BUILTIN10X16,&CbBtnCommon);
-  gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_RED_LT4,GSLC_COL_BLUE_LT3);
-  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
-  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
-  btnOther = pElemRef;
 
   // Create ring gauge E_ELEM_PHGAUGE 
   static char m_sRingText2[11] = "";
   pElemRef = gslc_ElemXRingGaugeCreate(&m_gui,E_ELEM_PHGAUGE,E_PG_MAIN,&m_sXRingGauge2,
-          (gslc_tsRect){325,50,150,150},
+          (gslc_tsRect){323,70,150,150},
           (char*)m_sRingText2,11,E_BUILTIN5X8);
   gslc_ElemXRingGaugeSetValRange(&m_gui, pElemRef, 0, 100);
   gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, 80); // Set initial value
@@ -323,7 +322,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_PHUNIT_TEXT modifiable text using flash API
   static char m_sDisplayText10[6] = "pH";
-  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_PHUNIT_TEXT,E_PG_MAIN,384,149,31,10,
+  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_PHUNIT_TEXT,E_PG_MAIN,382,169,31,10,
     m_sDisplayText10,6,&m_asFont[E_BUILTIN5X8],
     GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
     false,true,false,false,NULL,NULL,NULL,NULL);
@@ -331,7 +330,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEXT11 runtime modifiable text
   static char m_sDisplayText11[16] = "lo/hi";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT11,E_PG_MAIN,(gslc_tsRect){354,94,91,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT11,E_PG_MAIN,(gslc_tsRect){352,114,91,10},
     (char*)m_sDisplayText11,16,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4);
@@ -340,7 +339,7 @@ void InitGUIslice_gen()
   // Create ring gauge E_ELEM_TDSGAUGE 
   static char m_sRingText3[11] = "";
   pElemRef = gslc_ElemXRingGaugeCreate(&m_gui,E_ELEM_TDSGAUGE,E_PG_MAIN,&m_sXRingGauge3,
-          (gslc_tsRect){5,50,150,150},
+          (gslc_tsRect){7,70,150,150},
           (char*)m_sRingText3,11,E_BUILTIN5X8);
   gslc_ElemXRingGaugeSetValRange(&m_gui, pElemRef, 0, 100);
   gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, 80); // Set initial value
@@ -352,7 +351,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TDSUNIT_TEXT modifiable text using flash API
   static char m_sDisplayText13[6] = "ppm";
-  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_TDSUNIT_TEXT,E_PG_MAIN,64,149,31,10,
+  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_TDSUNIT_TEXT,E_PG_MAIN,66,169,31,10,
     m_sDisplayText13,6,&m_asFont[E_BUILTIN5X8],
     GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
     false,true,false,false,NULL,NULL,NULL,NULL);
@@ -360,37 +359,77 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEXT14 runtime modifiable text
   static char m_sDisplayText14[16] = "lo/hi";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT14,E_PG_MAIN,(gslc_tsRect){34,94,91,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT14,E_PG_MAIN,(gslc_tsRect){36,114,91,10},
     (char*)m_sDisplayText14,16,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4);
   tdsLoHiTxt = pElemRef;
+  
+  // Create E_ELEM_TEXT33 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT33,E_PG_MAIN,(gslc_tsRect){206,45,67,10},
+    (char*)"Temperature",0,E_BUILTIN5X8);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT34 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT34,E_PG_MAIN,(gslc_tsRect){72,45,19,10},
+    (char*)"TDS",0,E_BUILTIN5X8);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT36 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT36,E_PG_MAIN,(gslc_tsRect){391,45,13,10},
+    (char*)"pH",0,E_BUILTIN5X8);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT41 runtime modifiable text
+  static char m_sDisplayText41[51] = "Heater is currently off";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT41,E_PG_MAIN,(gslc_tsRect){89,210,301,10},
+    (char*)m_sDisplayText41,51,E_BUILTIN5X8);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_GRAY_LT1);
+  heaterStatTxt = pElemRef;
 
   // -----------------------------------
   // PAGE: E_PG_POPUP_NOTIFY
   
    
   // Create E_ELEM_BOX2 box
-  pElemRef = gslc_ElemCreateBox(&m_gui,E_ELEM_BOX2,E_PG_POPUP_NOTIFY,(gslc_tsRect){15,210,450,90});
+  pElemRef = gslc_ElemCreateBox(&m_gui,E_ELEM_BOX2,E_PG_POPUP_NOTIFY,(gslc_tsRect){10,230,460,80});
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   // Set the callback function to update content automatically
   gslc_ElemSetTickFunc(&m_gui,pElemRef,&CbTickScanner);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_WHITE,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_RED_LT4,GSLC_COL_RED_LT2,GSLC_COL_RED_LT4);
+   
+  // Create E_ELEM_BOX3 box
+  pElemRef = gslc_ElemCreateBox(&m_gui,E_ELEM_BOX3,E_PG_POPUP_NOTIFY,(gslc_tsRect){20,205,150,40});
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  // Set the callback function to update content automatically
+  gslc_ElemSetTickFunc(&m_gui,pElemRef,&CbTickScanner);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_RED_LT4,GSLC_COL_RED_LT2,GSLC_COL_RED_LT4);
   
-  // Create E_ELEM_TEXT17 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT17,E_PG_POPUP_NOTIFY,(gslc_tsRect){173,250,133,10},
-    (char*)"Testing In-Progress...",0,E_BUILTIN5X8);
-  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  // Create E_ELEM_TEXT_ALERT_MSG runtime modifiable text
+  static char m_sDisplayText17[31] = "Temperature is critically low";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT_ALERT_MSG,E_PG_POPUP_NOTIFY,(gslc_tsRect){30,260,361,18},
+    (char*)m_sDisplayText17,31,E_BUILTIN10X16);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_GRAY,GSLC_COL_BLUE_LT4,GSLC_COL_BLACK);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_GRAY,GSLC_COL_RED_LT2,GSLC_COL_BLACK);
+  alertMsgTxt = pElemRef;
   
   // create E_ELEM_BTN7 button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN7,E_PG_POPUP_NOTIFY,
-    (gslc_tsRect){400,230,50,50},(char*)"x",0,E_BUILTIN10X16,&CbBtnCommon);
+    (gslc_tsRect){415,235,50,70},(char*)"x",0,E_BUILTIN10X16,&CbBtnCommon);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,5);
-  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_DK2,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_RED_LT4,GSLC_COL_RED_LT2,GSLC_COL_RED_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
-  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
+  
+  // Create E_ELEM_TEXT42 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT42,E_PG_POPUP_NOTIFY,(gslc_tsRect){40,215,109,18},
+    (char*)"\x01 Warning",0,E_BUILTIN10X16);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_GRAY,GSLC_COL_RED_LT2,GSLC_COL_BLACK);
 
   // -----------------------------------
   // PAGE: E_PG_SUM
@@ -447,13 +486,14 @@ void InitGUIslice_gen()
   
   // create E_ELEM_BTN_HOME2 button with text label
   pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_HOME2,E_PG_STNG,
-    (gslc_tsRect){10,250,460,60},(char*)"Home",0,E_BUILTIN10X16,&CbBtnCommon);
+    (gslc_tsRect){10,250,225,60},(char*)"Home",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
   gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
   gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
    
-  // create checkbox E_ELEM_CHECK2
-  pElemRef = gslc_ElemXCheckboxCreate(&m_gui,E_ELEM_CHECK2,E_PG_STNG,&m_asXCheck2,
+  // create checkbox E_ELEM_CHECK_NOHEATER
+  pElemRef = gslc_ElemXCheckboxCreate(&m_gui,E_ELEM_CHECK_NOHEATER,E_PG_STNG,&m_asXCheck2,
     (gslc_tsRect){370,110,40,40},false,GSLCX_CHECKBOX_STYLE_BOX,GSLC_COL_BLUE_LT4,false);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_GRAY_DK1,GSLC_COL_BLACK,GSLC_COL_BLACK);
   noHeaterCB = pElemRef;
@@ -463,17 +503,17 @@ void InitGUIslice_gen()
     (char*)"Override Heater (OFF)",0,E_BUILTIN10X16);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
 
-  // Create E_DRAW_LINE4 line 
-  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE4,E_PG_STNG,15,90,465,90);
+  // Create E_DRAW_LINE_STNG1 line 
+  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE_STNG1,E_PG_STNG,15,90,465,90);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_GRAY_DK2,GSLC_COL_GRAY_DK2);
 
-  // Create E_DRAW_LINE5 line 
-  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE5,E_PG_STNG,15,170,465,170);
+  // Create E_DRAW_LINE_STNG2 line 
+  pElemRef = gslc_ElemCreateLine(&m_gui,E_DRAW_LINE_STNG2,E_PG_STNG,15,170,465,170);
   gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLACK,GSLC_COL_GRAY_DK2,GSLC_COL_GRAY_DK2);
   
-  // Create E_ELEM_NUMINPUT1 numeric input field
-  static char m_sInputNumber1[3] = "00";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_NUMINPUT1,E_PG_STNG,(gslc_tsRect){365,40,50,40},
+  // Create E_ELEM_NUMINPUT_TEMP numeric input field
+  static char m_sInputNumber1[3] = "75";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_NUMINPUT_TEMP,E_PG_STNG,(gslc_tsRect){365,40,50,40},
     (char*)m_sInputNumber1,3,E_BUILTIN10X16);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtMargin(&m_gui,pElemRef,5);
@@ -483,7 +523,7 @@ void InitGUIslice_gen()
   gslc_ElemSetFrameEn(&m_gui,pElemRef,true);
   gslc_ElemSetClickEn(&m_gui, pElemRef, true);
   gslc_ElemSetTouchFunc(&m_gui, pElemRef, &CbBtnCommon);
-  desiredTemp = pElemRef;
+  desiredTempElem = pElemRef;
   gslc_ElemSetTxtEnc(&m_gui,pElemRef,GSLC_TXT_ENC_UTF8);
   
   // Create E_ELEM_TEXT28 text label
@@ -502,12 +542,88 @@ void InitGUIslice_gen()
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_RIGHT);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   
-  // Create E_ELEM_TEXT31 runtime modifiable text
+  // Create E_ELEM_TEXT_STNG_DESTEMP runtime modifiable text
   static char m_sDisplayText31[4] = "\xf7F";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT31,E_PG_STNG,(gslc_tsRect){425,50,37,18},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT_STNG_DESTEMP,E_PG_STNG,(gslc_tsRect){425,50,37,18},
     (char*)m_sDisplayText31,4,E_BUILTIN10X16);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   settingsTempUnitTxt = pElemRef;
+  
+  // create E_ELEM_BTN_STNG_CALPH button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_STNG_CALPH,E_PG_STNG,
+    (gslc_tsRect){245,250,225,60},(char*)"Calibrate pH",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
+  btnSettings25_26 = pElemRef;
+
+  // -----------------------------------
+  // PAGE: E_PG_CALPH
+  
+  
+  // create E_ELEM_BTN_CALPH_LO button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_CALPH_LO,E_PG_CALPH,
+    (gslc_tsRect){10,185,150,60},(char*)"4.00",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
+  
+  // create E_ELEM_BTN_CALPH_MD button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_CALPH_MD,E_PG_CALPH,
+    (gslc_tsRect){165,185,150,60},(char*)"7.00",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
+  
+  // create E_ELEM_BTN_CALPH_HI button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_CALPH_HI,E_PG_CALPH,
+    (gslc_tsRect){320,185,150,60},(char*)"10.00",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
+  
+  // Create E_ELEM_TEXT35 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT35,E_PG_CALPH,(gslc_tsRect){167,40,145,10},
+    (char*)"Calibration Instructions",0,E_BUILTIN5X8);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // create E_ELEM_BTN_HOME3 button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_HOME3,E_PG_CALPH,
+    (gslc_tsRect){10,250,305,60},(char*)"Home",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
+  
+  // create E_ELEM_BTN_CALPH_CLR button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_CALPH_CLR,E_PG_CALPH,
+    (gslc_tsRect){320,250,150,60},(char*)"Clear",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetTxtMargin(&m_gui,pElemRef,10);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT3,GSLC_COL_RED_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
+  
+  // Create E_ELEM_TEXT38 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT38,E_PG_CALPH,(gslc_tsRect){20,80,349,10},
+    (char*)"1. Ensure sensor is in the desired calibration pH solution",0,E_BUILTIN5X8);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT39 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT39,E_PG_CALPH,(gslc_tsRect){20,110,397,10},
+    (char*)"2. Select the corresponding pH level or clear previous calibration",0,E_BUILTIN5X8);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT40 runtime modifiable text
+  static char m_sDisplayText40[51] = " ";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT40,E_PG_CALPH,(gslc_tsRect){89,150,301,10},
+    (char*)m_sDisplayText40,51,E_BUILTIN5X8);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_GREEN_LT4);
+  calpHStatTxt = pElemRef;
 
   // -----------------------------------
   // PAGE: E_POP_KEYPAD_NUM

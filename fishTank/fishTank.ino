@@ -28,8 +28,8 @@
 // *** VARIABLES *** //
 #define RELAY_PIN   13	  	// Relay pin
 #define TEMP_SENSOR 23      // Temp sensor pin
-#define TDS_SENSOR  38			// TDS Sensor pin
-#define PH_SENSOR   A2      // pH sensor pin
+#define TDS_SENSOR  36			// TDS Sensor pin
+#define PH_SENSOR   34      // pH sensor pin
 
 #define VREF        3.3     // [TDS] analog reference voltage(Volt) of the ADC
 #define SCOUNT      30      // [TDS] sum of sample point
@@ -48,8 +48,9 @@ SMTPSession smtp;
 
 // loop update variable
 unsigned long loopTime = 0L;
-AsyncDelay mainDelay(15000, AsyncDelay::MILLIS);  // main loop delay (15 seconds)
-AsyncDelay graphDelay(100, AsyncDelay::MILLIS);   // very small delay before drawing the graph (so it won't overlap with the home page)
+AsyncDelay mainDelay(15000, AsyncDelay::MILLIS);    // main loop delay (15 seconds)
+AsyncDelay graphDelay(100, AsyncDelay::MILLIS);     // very small delay before drawing the graph (so it won't overlap with the home page)
+AsyncDelay alertDelay(30000, AsyncDelay::MILLIS);   // Delay between showing alerts
 
 // Getting Time
 #define NTP_SERVER      "pool.ntp.org"  // time protocol server
@@ -61,19 +62,19 @@ int curHr = -1, prevHr = -1;
 // Temp
 OneWire oneWire(TEMP_SENSOR);
 DallasTemperature tempSensor(&oneWire);
-float tempC = 0, tempLo = 999, tempHi = -999; // Where to store current temperature
+double tempC = 0, tempLo = 9999, tempHi = -9999; // Where to store current temperature
+int desiredTemp = 75;
+bool heaterOn = false;
 
 // TDS
 int analogBuffer[SCOUNT]; 			// store the analog value in the array, read from ADC
 int analogBufferTemp[SCOUNT];
 int analogBufferIndex = 0, copyIndex = 0;
-float averageVoltage = 0, tdsValue = 0, tdsLo = 999, tdsHi = -999;
+double averageVoltage = 0, tdsValue = 0, tdsLo = 9999, tdsHi = -9999;
 
 // pH
 Gravity_pH pH = Gravity_pH(PH_SENSOR);
-uint8_t user_bytes_received = 0;
-const uint8_t bufferlen = 32;
-char user_data[bufferlen];
+double phVal, phLo = 9999, phHi = -9999;
 
 // Graph variables
 boolean redrawGraph = true;
@@ -100,11 +101,14 @@ logNode dataLog;
 
 // Save some element references for direct access
 //<Save_References !Start!>
-gslc_tsElemRef* btnOther          = NULL;
+gslc_tsElemRef* alertMsgTxt       = NULL;
 gslc_tsElemRef* btnSettings       = NULL;
+gslc_tsElemRef* btnSettings25_26  = NULL;
 gslc_tsElemRef* btnSummary        = NULL;
+gslc_tsElemRef* calpHStatTxt      = NULL;
 gslc_tsElemRef* clockTxt          = NULL;
-gslc_tsElemRef* desiredTemp       = NULL;
+gslc_tsElemRef* desiredTempElem   = NULL;
+gslc_tsElemRef* heaterStatTxt     = NULL;
 gslc_tsElemRef* noHeaterCB        = NULL;
 gslc_tsElemRef* phGauge           = NULL;
 gslc_tsElemRef* phLoHiTxt         = NULL;
@@ -152,8 +156,6 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
         gslc_ElemSetTxtStr(&m_gui, statusbarText, "Settings");
         gslc_SetPageCur(&m_gui, E_PG_STNG);
         break;
-      case E_ELEM_BTN4:
-        break;
       case E_ELEM_BTN7:
         gslc_PopupHide(&m_gui);
         break;
@@ -181,11 +183,37 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
         break;
       case E_ELEM_BTN_HOME2:
         gslc_ElemSetTxtStr(&m_gui, statusbarText, "Home");
+        controlHeater(); // Just to update the heater label to reflect changes to override setting
         gslc_SetPageCur(&m_gui, E_PG_MAIN);
         break;
-      case E_ELEM_NUMINPUT1:
+      case E_ELEM_NUMINPUT_TEMP:
         // Clicked on edit field, so show popup box and associate with this text field
-        gslc_ElemXKeyPadInputAsk(&m_gui, m_pElemKeyPadNum, E_POP_KEYPAD_NUM, desiredTemp);
+        gslc_ElemXKeyPadInputAsk(&m_gui, m_pElemKeyPadNum, E_POP_KEYPAD_NUM, desiredTempElem);
+        break;
+      case E_ELEM_BTN_STNG_CALPH:
+        gslc_ElemSetTxtStr(&m_gui, statusbarText, "Calibrating pH");
+        gslc_ElemSetTxtStr(&m_gui, calpHStatTxt, " ");
+        gslc_SetPageCur(&m_gui, E_PG_CALPH);
+        break;
+      case E_ELEM_BTN_CALPH_LO:
+        gslc_ElemSetTxtStr(&m_gui, calpHStatTxt, "Successfully Calibrated Low (4.00)");
+        pH.cal_low();
+        break;
+      case E_ELEM_BTN_CALPH_MD:
+        gslc_ElemSetTxtStr(&m_gui, calpHStatTxt, "Successfully Calibrated Medium (7.00)");
+        pH.cal_mid();
+        break;
+      case E_ELEM_BTN_CALPH_HI:
+        gslc_ElemSetTxtStr(&m_gui, calpHStatTxt, "Successfully Calibrated High (10.00)");
+        pH.cal_high();
+        break;
+      case E_ELEM_BTN_HOME3:
+        gslc_ElemSetTxtStr(&m_gui, statusbarText, "Home");
+        gslc_SetPageCur(&m_gui, E_PG_MAIN);
+        break;
+      case E_ELEM_BTN_CALPH_CLR:
+        gslc_ElemSetTxtStr(&m_gui, calpHStatTxt, "Successfully Cleared Calibration");
+        pH.cal_clear();
         break;
 //<Button Enums !End!>
       default:
@@ -211,11 +239,12 @@ bool CbKeypad(void* pvGui, void *pvElemRef, int16_t nState, void* pvData)
     //   the corresponding value field
     switch (nTargetElemId) {
 //<Keypad Enums !Start!>
-      case E_ELEM_NUMINPUT1:
-        gslc_ElemXKeyPadInputGet(pGui, desiredTemp, pvData);
-	    gslc_PopupHide(&m_gui);
-        break;
 
+      case E_ELEM_NUMINPUT_TEMP:
+        gslc_ElemXKeyPadInputGet(pGui, desiredTempElem, pvData);
+	      gslc_PopupHide(&m_gui);
+        handleDesiredTemp();
+        break;
 //<Keypad Enums !End!>
       default:
         break;
@@ -232,26 +261,9 @@ bool CbKeypad(void* pvGui, void *pvElemRef, int16_t nState, void* pvData)
 //<Listbox Callback !End!>
 //<Draw Callback !Start!>
 //<Draw Callback !End!>
-
-// Callback function for when a slider's position has been updated
-bool CbSlidePos(void* pvGui,void* pvElemRef,int16_t nPos)
-{
-  gslc_tsGui*     pGui     = (gslc_tsGui*)(pvGui);
-  gslc_tsElemRef* pElemRef = (gslc_tsElemRef*)(pvElemRef);
-  gslc_tsElem*    pElem    = gslc_GetElemFromRef(pGui,pElemRef);
-  int16_t         nVal;
-
-  // From the element's ID we can determine which slider was updated.
-  switch (pElem->nId) {
 //<Slider Enums !Start!>
-
 //<Slider Enums !End!>
-    default:
-      break;
-  }
 
-  return true;
-}
 
 bool CbTickScanner(void* pvGui,void* pvScope)
 {
@@ -288,12 +300,9 @@ void setup()
   Serial.print("ESP Board MAC Address:  ");
   Serial.println(WiFi.macAddress());
 
-  // Disconnect WiFi
-   WiFi.disconnect(true);
-   WiFi.mode(WIFI_OFF);
-
 	pinMode(TDS_SENSOR, INPUT); // set TDS sensor
   tempSensor.begin();         // start temp sensor
+  pH.begin();                 // start pH sensor
 
 	// Initialize Relay pin as an output
 	pinMode(RELAY_PIN, OUTPUT);
@@ -304,6 +313,10 @@ void setup()
 
 	// Initial Setup
   initSetup();
+
+  // Disconnect WiFi
+  //  WiFi.disconnect(true);
+  //  WiFi.mode(WIFI_OFF);
 
 }
 
@@ -319,6 +332,8 @@ void loop()
     // main sensors func
     testSensors();
 
+    controlHeater(); // Check whether to turn the heater on/off
+
     logData(); // Logs data every 1hr
 
     // Draws the graph when the user is in the summary page
@@ -330,12 +345,13 @@ void loop()
 		tempC = tempSensor.getTempCByIndex(0);
 		getTDSVal();
 		// Print Results to Serial Monitor
-		Serial.print("TDS:");
+		Serial.print("TDS: ");
 		Serial.print(tdsValue, 0);
-		Serial.print("ppm // ");
+		Serial.print("ppm  //  ");
 		Serial.print("Temperature: ");
 		Serial.print(tempSensor.getTempCByIndex(0));
-		Serial.println("ºC");
+		Serial.print("ºC  //  pH: ");
+    Serial.println(pH.read_ph());
 		
 	} // End of 5sec update delay
 
@@ -359,7 +375,6 @@ void loop()
  */
 void testSensors() 
 {
-
   // * Temperature
   tempSensor.requestTemperatures();
 	tempC = tempSensor.getTempCByIndex(0);
@@ -386,8 +401,13 @@ void testSensors()
 
 
   // * pH
-  // TODO: implement pH update function & display results on screen
-  updateGauge(phGauge, phLoHiTxt, 23, 20, 24);
+  phVal = pH.read_ph();
+  if (phVal < phLo && phVal >= 0) phLo = phVal;
+  if (phVal > phHi) phHi = phVal;
+  
+  if (phVal <= 0) updateGauge(phGauge, phLoHiTxt, -1, phLo, phHi);
+  else updateGauge(phGauge, phLoHiTxt, phVal, phLo, phHi);
+
   
 }
 
@@ -400,9 +420,9 @@ void initSetup()
 
 	// Set the ring's value text color, font and the ring's min and max values for each ring.
 	setTxtStyle(tempGauge, GSLC_COL_WHITE, E_BUILTIN15X24);
-	gslc_ElemXRingGaugeSetValRange(&m_gui, tempGauge, 0, 80);
+	gslc_ElemXRingGaugeSetValRange(&m_gui, tempGauge, 32, 90);
 	setTxtStyle(phGauge, GSLC_COL_WHITE, E_BUILTIN15X24);
-	gslc_ElemXRingGaugeSetValRange(&m_gui, phGauge, 0, 100);
+	gslc_ElemXRingGaugeSetValRange(&m_gui, phGauge, 0, 15);
 	setTxtStyle(tdsGauge, GSLC_COL_WHITE, E_BUILTIN15X24);
 	gslc_ElemXRingGaugeSetValRange(&m_gui, tdsGauge, 0, 1000);
 
@@ -411,9 +431,11 @@ void initSetup()
 	gslc_ElemSetTxtStr(&m_gui, phUnitTxt, "pH");
 	gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char*)"\xf7""F");
   gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char*)"\xf7""F");
+  
 
   testSensors();
   mainDelay.expire(); // When the app first starts, expire the main loop timer so the code executes immediately
+  alertDelay.restart();
 
 }
 
@@ -489,37 +511,57 @@ void updateGauge(gslc_tsElemRef *pElemRef, gslc_tsElemRef *pSubElemRef, int n, i
  * Heater element function
  * 
  */
-void controlHeater(int temperature, int userTemp)
+void controlHeater()
 {
-	int lowerLimit = userTemp -2;
-	int upperLimit = userTemp +2;
-		// Set pin to HIGH to turn on - Set pin to LOW to turn off
-	if (upperLimit > 26.66)
+
+  // Update heater status label
+  if (gslc_ElemXCheckboxGetState(&m_gui, noHeaterCB)) gslc_ElemSetTxtStr(&m_gui, heaterStatTxt, "Heater is Disabled");
+  else if (heaterOn) gslc_ElemSetTxtStr(&m_gui, heaterStatTxt, "Heater is Currently On");
+  else gslc_ElemSetTxtStr(&m_gui, heaterStatTxt, "Heater is Currently Off");
+  
+
+	int lowerLimit = desiredTemp - 2;
+	int upperLimit = desiredTemp + 2;
+  // Set pin to HIGH to turn on - Set pin to LOW to turn off
+
+	if (tempC > 26.66) // if temperature is too high
 	{
     // Turn heater off
 		digitalWrite(RELAY_PIN, LOW);
-		//alert the user
+    heaterOn = false;
+		showAlert("Temperature is critically high");
 		//display visual alarm   *maybe make a function for alarms, either together or seperate
 		//initiate speaker alarm
 	}
-	if (temperature <= lowerLimit)
+	else if (tempC < 18.33) // if temperature is too low
 	{
-    // Turn heater on
-		digitalWrite(RELAY_PIN, HIGH);
-	}
-	if (temperature >= upperLimit)
-	{
-    // Turn heater off
-		digitalWrite(RELAY_PIN, LOW);
-	}
-	if (temperature < 18.33)
-	{
-    // Turn heater on
-		digitalWrite(RELAY_PIN, HIGH);
-		//alert user
+    // Turn heater on (first check if override not checked)
+    if (!gslc_ElemXCheckboxGetState(&m_gui, noHeaterCB))
+    {
+      digitalWrite(RELAY_PIN, HIGH);
+      heaterOn = true;
+    }
+		showAlert("Temperature is critically low");
 		//display visual alarm
 		//initiate speaker alarm
 	}
+	else if (tempC <= lowerLimit) // if temperature is less than desired temp
+	{
+    // Turn heater on (first check if override not checked)
+    if (!gslc_ElemXCheckboxGetState(&m_gui, noHeaterCB))
+    {
+      digitalWrite(RELAY_PIN, HIGH);
+      heaterOn = true;
+    }
+    
+	}
+	else if (tempC >= upperLimit) // if temperature is more than desired temp
+	{
+    // Turn heater off
+		digitalWrite(RELAY_PIN, LOW);
+    heaterOn = false;
+	}
+  
 }
 
 
@@ -529,15 +571,28 @@ void controlHeater(int temperature, int userTemp)
  */
 void handleTempUnitToggle()
 {
+  char tempstr[2];
+  int temp;
+
   if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle))
   { // use F
     gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char *)"\xf7""F");
     gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char *)"\xf7""F");
+    gslc_ElemXRingGaugeSetValRange(&m_gui, tempGauge, 32, 90);
+
+    sscanf(gslc_ElemGetTxtStr(&m_gui, desiredTempElem), "%d", &temp);
+    sprintf(tempstr, "%.0lf", tempSensor.toFahrenheit(temp));
+    gslc_ElemSetTxtStr(&m_gui, desiredTempElem, tempstr);
   }
   else
   { // use C
     gslc_ElemSetTxtStr(&m_gui, tempUnitTxt, (char *)"\xf7""C");
     gslc_ElemSetTxtStr(&m_gui, settingsTempUnitTxt, (char *)"\xf7""C");
+    gslc_ElemXRingGaugeSetValRange(&m_gui, tempGauge, 0, 35);
+
+    sscanf(gslc_ElemGetTxtStr(&m_gui, desiredTempElem), "%d", &temp);
+    sprintf(tempstr, "%.0lf", tempSensor.toCelsius(temp));
+    gslc_ElemSetTxtStr(&m_gui, desiredTempElem, tempstr);
   }
   testSensors();
 }
@@ -711,7 +766,7 @@ void Graph(int dx, double x, double y, double gx, double gy, double w, double h,
   if (redraw == true) {
 
     redraw = false;
-    gslc_DrawFillRect(&m_gui, (gslc_tsRect){gx,gy-h,w+10,h+20}, bcolor);
+    gslc_DrawFillRect(&m_gui, (gslc_tsRect){gx-30,gy-h-10,w+40,h+30}, bcolor);
 
     // initialize old x and old y in order to draw the first point of the graph
     // but save the transformed value
@@ -777,11 +832,12 @@ void logData()
 {
   curHr = timeinfo.tm_min%24; // DEBUG: for now it logs every minute (for testing purposes) need to change to 'tm_hour' in final build
 
-  if (curHr != prevHr) // Update what's inside every 1 hour.
+  if (curHr != prevHr) // Update what's inside every 1 hour
 	{
 		// Log the temperature value
-    // dataLog.tempVal[curHr] = tempC;
-    // TODO: Log TDS & pH values
+    dataLog.tempVal[curHr] = tempC;
+    dataLog.phVal[curHr] = phVal;
+    dataLog.tdsVal[curHr] = tdsValue;
 
     dataLog.curIndex = curHr; // Update the log current index to the current hour
 
@@ -790,8 +846,8 @@ void logData()
     if (curHr == 0)
     {
       // Reset lo/hi values every day at 12AM
-      tempLo = tdsLo = 999;
-      tempHi = tdsHi = -999; 
+      tempLo = tdsLo = phLo = 9999;
+      tempHi = tdsHi = phHi = -9999;
     }
     
     redrawGraph = true;
@@ -800,6 +856,10 @@ void logData()
 }
 
 
+/**
+ * @brief Handles drawing and updating the graph in the summary page
+ * 
+ */
 void handleGraphUpdate() {
   if (gslc_GetPageCur(&m_gui) == E_PG_SUM) // Only draw/update if the user is in the summary page & every 1s
   { 
@@ -807,6 +867,37 @@ void handleGraphUpdate() {
     double gx = 40, gy = 210, gw = 420, gh = 170;
     int x, y; // needed variables for the plot
     int iCap = (dataLog.isFull) ? 23 : dataLog.curIndex - dataLog.startIndex; // How many x data to plot is determined by how many hours passed if the log isn't full yet, and if it's full it's always 24(with the 0).
+
+    if (dataLog.selectedSum == 0) 
+    {
+      gslc_ElemSetTxtStr(&m_gui, statusbarText, "Temperature Summary");
+      // Highlight selected tab/btn
+      if (redrawGraph) {
+        gslc_ElemSetCol(&m_gui, tempSumBtn,GSLC_COL_WHITE,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT3);
+        gslc_ElemSetCol(&m_gui, tdsSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+        gslc_ElemSetCol(&m_gui, phSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+      }
+
+    } else if (dataLog.selectedSum == 1)
+    {
+      gslc_ElemSetTxtStr(&m_gui, statusbarText, "TDS Summary");
+      // Highlight selected tab/btn
+      if (redrawGraph) {
+        gslc_ElemSetCol(&m_gui, tdsSumBtn,GSLC_COL_WHITE,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT3);
+        gslc_ElemSetCol(&m_gui, tempSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+        gslc_ElemSetCol(&m_gui, phSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+      }
+
+    } else 
+    {
+      gslc_ElemSetTxtStr(&m_gui, statusbarText, "pH Summary");
+      // Highlight selected tab/btn
+      if (redrawGraph) {
+        gslc_ElemSetCol(&m_gui, phSumBtn,GSLC_COL_WHITE,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT3);
+        gslc_ElemSetCol(&m_gui, tdsSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+        gslc_ElemSetCol(&m_gui, tempSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+      }
+    }
 
     for (int i = 0; i <= iCap; i++) 
     {
@@ -818,17 +909,8 @@ void handleGraphUpdate() {
         x = (i+dataLog.startIndex) % 24; // If not, start the x axis from the first hour when the device was turned on.
       }
 
-
       if (dataLog.selectedSum == 0)
       {
-        gslc_ElemSetTxtStr(&m_gui, statusbarText, "Temperature Summary");
-        // Highlight selected tab/btn
-        if (redrawGraph) {
-          gslc_ElemSetCol(&m_gui, tempSumBtn,GSLC_COL_WHITE,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT3);
-          gslc_ElemSetCol(&m_gui, tdsSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
-          gslc_ElemSetCol(&m_gui, phSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
-        }
-        
         // Draw the temperature plot (Shows values in C or F depending on user's preference)
         if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle)) 
         {
@@ -842,25 +924,13 @@ void handleGraphUpdate() {
       
       } else if (dataLog.selectedSum == 1)
       {
-        gslc_ElemSetTxtStr(&m_gui, statusbarText, "TDS Summary");
-        // Highlight selected tab/btn
-        if (redrawGraph) {
-          gslc_ElemSetCol(&m_gui, tdsSumBtn,GSLC_COL_WHITE,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT3);
-          gslc_ElemSetCol(&m_gui, tempSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
-          gslc_ElemSetCol(&m_gui, phSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
-        }
-        // TODO graph TDS
+        // graph TDS
+        Graph(x, i, dataLog.tdsVal[x], gx, gy, gw, gh, 0, 23, 1, 10, 35, 5, "time of day", "TDS (ppm)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK3, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
       }
       else
       {
-        gslc_ElemSetTxtStr(&m_gui, statusbarText, "pH Summary");
-        // Highlight selected tab/btn
-        if (redrawGraph) {
-          gslc_ElemSetCol(&m_gui, phSumBtn,GSLC_COL_WHITE,GSLC_COL_BLUE_LT3,GSLC_COL_BLUE_LT3);
-          gslc_ElemSetCol(&m_gui, tdsSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
-          gslc_ElemSetCol(&m_gui, tempSumBtn,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
-        }
-        // TODO graph pH
+        // graph pH
+        Graph(x, i, dataLog.phVal[x], gx, gy, gw, gh, 0, 23, 1, 10, 35, 5, "time of day", "pH Level (pH)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK3, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
       }
       
 
@@ -869,47 +939,63 @@ void handleGraphUpdate() {
   }
 }
 
-void parse_cmd(char* string) {
-  strupr(string);                                
-  if (strcmp(string, "CAL,7") == 0) {       
-    pH.cal_mid();                                
-    Serial.println("MID CALIBRATED");
+/**
+ * @brief Handles the desired temperature option in the settings (checks edge cases, etc)
+ * 
+ */
+void handleDesiredTemp()
+{
+  
+  double usrTemp;
+  sscanf(gslc_ElemGetTxtStr(&m_gui, desiredTempElem), "%lf", &usrTemp);
+
+  if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle))
+  { // use F
+    if (usrTemp > 80)
+    {
+      gslc_ElemSetTxtStr(&m_gui, desiredTempElem, "80");
+      usrTemp = 80;
+    } 
+    else if (usrTemp < 65) 
+    {
+      gslc_ElemSetTxtStr(&m_gui, desiredTempElem, "65");
+      usrTemp = 65;
+    }
+
+    usrTemp = tempSensor.toCelsius(usrTemp);
+    
   }
-  else if (strcmp(string, "CAL,4") == 0) {            
-    pH.cal_low();                                
-    Serial.println("LOW CALIBRATED");
+  else
+  { // use C
+    if (usrTemp > 27)
+    {
+      gslc_ElemSetTxtStr(&m_gui, desiredTempElem, "27");
+      usrTemp = 27;
+    } 
+    else if (usrTemp < 18) 
+    {
+      gslc_ElemSetTxtStr(&m_gui, desiredTempElem, "18");
+      usrTemp = 18;
+    }
   }
-  else if (strcmp(string, "CAL,10") == 0) {      
-    pH.cal_high();                               
-    Serial.println("HIGH CALIBRATED");
-  }
-  else if (strcmp(string, "CAL,CLEAR") == 0) { 
-    pH.cal_clear();                              
-    Serial.println("CALIBRATION CLEARED");
-  }
+
+  desiredTemp = usrTemp;
 }
 
-void calibrate() {
-  Serial.begin(115200);                            
-  delay(200);
-  Serial.println(F("Use commands \"CAL,7\", \"CAL,4\", and \"CAL,10\" to calibrate the circuit to those respective values"));
-  Serial.println(F("Use command \"CAL,CLEAR\" to clear the calibration"));
-  if (pH.begin()) {                                     
-    Serial.println("Loaded EEPROM");
-  }
-}
 
-void get_pH() {
-  if (Serial.available() > 0) {                                                      
-    user_bytes_received = Serial.readBytesUntil(13, user_data, sizeof(user_data));   
-  }
-
-  if (user_bytes_received) {                                                      
-    parse_cmd(user_data);                                                          
-    user_bytes_received = 0;                                                        
-    memset(user_data, 0, sizeof(user_data));                                         
+/**
+ * @brief Shows a warning alert popup with a custom message
+ * 
+ * @param msg: custom message
+ */
+void showAlert(char *msg)
+{
+  if (alertDelay.isExpired())
+  {
+    alertDelay.restart();
+    gslc_ElemSetTxtStr(&m_gui, alertMsgTxt, msg);
+    gslc_PopupShow(&m_gui, E_PG_POPUP_NOTIFY, true);
+    redrawGraph = true;
   }
   
-  Serial.println(pH.read_ph());                                                      
-  delay(1000);
 }
