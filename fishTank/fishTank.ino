@@ -1,16 +1,6 @@
-//<App !Start!>
-// FILE: [fishTank.ino]
-// Created by GUIslice Builder version: [0.17.b02]
-//
-// GUIslice Builder Generated File
-//
-// For the latest guides, updates and support view:
-// https://github.com/ImpulseAdventure/GUIslice
-//
-//<App !End!>
-
-// Fish Tank
+// Fish Tank Monitor
 // - Team Electric Ox [4]
+// ECE 212
 // By: Meshal, Micah, Kenny, Gene
 
 // ------------------------------------------------
@@ -26,7 +16,7 @@
 #include <AsyncDelay.h>
 
 // *** VARIABLES *** //
-#define RELAY_PIN   13	  	// Relay pin
+#define RELAY_PIN   21	  	// Relay pin
 #define TEMP_SENSOR 23      // Temp sensor pin
 #define TDS_SENSOR  36			// TDS Sensor pin
 #define PH_SENSOR   34      // pH sensor pin
@@ -35,8 +25,8 @@
 #define SCOUNT      30      // [TDS] sum of sample point
 
 // WiFi Setup
-#define SSID "01001101"
-#define SSID_PWD "0x01001101"
+#define SSID "M XI"
+#define SSID_PWD "Password"
 #define SMTP_HOST "smtp.gmail.com"                      // Mail Server name
 #define SMTP_PORT 465                                   // Use Port 465 for Gmail
 #define AUTHOR_EMAIL "PSU.FishTankMonitor@gmail.com"    // Email sender credentials
@@ -48,9 +38,12 @@ SMTPSession smtp;
 
 // loop update variable
 unsigned long loopTime = 0L;
-AsyncDelay mainDelay(15000, AsyncDelay::MILLIS);    // main loop delay (15 seconds)
+AsyncDelay mainDelay(5000, AsyncDelay::MILLIS);    // main loop delay (15 seconds)
 AsyncDelay graphDelay(100, AsyncDelay::MILLIS);     // very small delay before drawing the graph (so it won't overlap with the home page)
 AsyncDelay alertDelay(30000, AsyncDelay::MILLIS);   // Delay between showing alerts
+
+// Check if connected to internet bool
+bool wifiConnected = false;
 
 // Getting Time
 #define NTP_SERVER      "pool.ntp.org"  // time protocol server
@@ -63,7 +56,7 @@ int curHr = -1, prevHr = -1;
 OneWire oneWire(TEMP_SENSOR);
 DallasTemperature tempSensor(&oneWire);
 double tempC = 0, tempLo = 9999, tempHi = -9999; // Where to store current temperature
-int desiredTemp = 75;
+int desiredTemp = 24;
 bool heaterOn = false;
 
 // TDS
@@ -114,7 +107,9 @@ gslc_tsElemRef* phGauge           = NULL;
 gslc_tsElemRef* phLoHiTxt         = NULL;
 gslc_tsElemRef* phSumBtn          = NULL;
 gslc_tsElemRef* phUnitTxt         = NULL;
+gslc_tsElemRef* pwdTxtInput       = NULL;
 gslc_tsElemRef* settingsTempUnitTxt= NULL;
+gslc_tsElemRef* ssidTxtInput      = NULL;
 gslc_tsElemRef* statusbarText     = NULL;
 gslc_tsElemRef* tdsGauge          = NULL;
 gslc_tsElemRef* tdsLoHiTxt        = NULL;
@@ -125,7 +120,10 @@ gslc_tsElemRef* tempLoHiTxt       = NULL;
 gslc_tsElemRef* tempSumBtn        = NULL;
 gslc_tsElemRef* tempUnitToggle    = NULL;
 gslc_tsElemRef* tempUnitTxt       = NULL;
+gslc_tsElemRef* wifiConnectBtn    = NULL;
+gslc_tsElemRef* wifiStatusTxt     = NULL;
 gslc_tsElemRef* m_pElemKeyPadNum  = NULL;
+gslc_tsElemRef* m_pElemKeyPadAlpha= NULL;
 //<Save_References !End!>
 
 // Define debug message function
@@ -215,6 +213,17 @@ bool CbBtnCommon(void* pvGui,void *pvElemRef,gslc_teTouch eTouch,int16_t nX,int1
         gslc_ElemSetTxtStr(&m_gui, calpHStatTxt, "Successfully Cleared Calibration");
         pH.cal_clear();
         break;
+      case E_ELEM_TEXTINPUT1:
+        // Clicked on edit field, so show popup box and associate with this text field
+        gslc_ElemXKeyPadInputAsk(&m_gui, m_pElemKeyPadAlpha, E_POP_KEYPAD_ALPHA, ssidTxtInput);
+        break;
+      case E_ELEM_TEXTINPUT2:
+        // Clicked on edit field, so show popup box and associate with this text field
+        gslc_ElemXKeyPadInputAsk(&m_gui, m_pElemKeyPadAlpha, E_POP_KEYPAD_ALPHA, pwdTxtInput);
+        break;
+      case E_ELEM_BTN_WIFI_CONNECT:
+        handleWifiSetupBtn();
+        break;
 //<Button Enums !End!>
       default:
         break;
@@ -244,6 +253,14 @@ bool CbKeypad(void* pvGui, void *pvElemRef, int16_t nState, void* pvData)
         gslc_ElemXKeyPadInputGet(pGui, desiredTempElem, pvData);
 	      gslc_PopupHide(&m_gui);
         handleDesiredTemp();
+        break;
+      case E_ELEM_TEXTINPUT1:
+        gslc_ElemXKeyPadInputGet(pGui, ssidTxtInput, pvData);
+	    gslc_PopupHide(&m_gui);
+        break;
+      case E_ELEM_TEXTINPUT2:
+        gslc_ElemXKeyPadInputGet(pGui, pwdTxtInput, pvData);
+	    gslc_PopupHide(&m_gui);
         break;
 //<Keypad Enums !End!>
       default:
@@ -283,33 +300,34 @@ void setup()
   // * SETUP
   Serial.begin(115200);
 
-  //connect to WiFi
-  Serial.printf("Connecting to %s ", SSID);
-  WiFi.begin(SSID, SSID_PWD);
-  while (WiFi.status() != WL_CONNECTED) {
-	delay(500);
-	Serial.print(".");
+  // Create graphic elements
+  InitGUIslice_gen();
+  gslc_InitDebug(&DebugOut);
+  
+  // WIFI SETUP
+  while (!wifiConnected) // while not connected, do not proceed further and just show the setup page
+  {
+    gslc_SetPageCur(&m_gui, E_PG_SETUP);
+	  gslc_Update(&m_gui); // Update Screen
   }
-  Serial.println("CONNECTED to WIFI");
 
   // Get local time from ntp server via WiFi
   configTime(GMT_OFFSET, DAYLIGHT_OFFSET, NTP_SERVER);
 	getLocalTime(&timeinfo);
-  dataLog.startIndex = timeinfo.tm_min%24; // Get the current hour (when the device is first turned on)
+  dataLog.startIndex = timeinfo.tm_hour%24; // Get the current hour (when the device is first turned on)
 
   Serial.print("ESP Board MAC Address:  ");
   Serial.println(WiFi.macAddress());
 
-	pinMode(TDS_SENSOR, INPUT); // set TDS sensor
+  gslc_SetPageCur(&m_gui, E_PG_MAIN); // after connecting, go to home screen
+
+  // Initialize Sensors
+  pinMode(TDS_SENSOR, INPUT); // set TDS sensor
   tempSensor.begin();         // start temp sensor
   pH.begin();                 // start pH sensor
 
 	// Initialize Relay pin as an output
 	pinMode(RELAY_PIN, OUTPUT);
-
-  // Create graphic elements
-  InitGUIslice_gen();
-  gslc_InitDebug(&DebugOut);
 
 	// Initial Setup
   initSetup();
@@ -364,7 +382,7 @@ void loop()
 	gslc_ElemSetTxtStr(&m_gui, clockTxt, clock);				    // Update sreen text
 
   // Periodically call GUIslice update function
-	gslc_Update(&m_gui);   
+	gslc_Update(&m_gui);
 
 } // End of loop
 
@@ -384,10 +402,10 @@ void testSensors()
   
   if (gslc_ElemXTogglebtnGetState(&m_gui, tempUnitToggle))
   { // display temp in F
-    updateGauge(tempGauge, tempLoHiTxt, tempSensor.toFahrenheit(tempC), tempSensor.toFahrenheit(tempLo), tempSensor.toFahrenheit(tempHi));
+    updateGauge(tempGauge, tempLoHiTxt, tempSensor.toFahrenheit(tempC), tempSensor.toFahrenheit(tempLo), tempSensor.toFahrenheit(tempHi), 0);
   } else 
   { // display temp in C
-    updateGauge(tempGauge, tempLoHiTxt, tempC, tempLo, tempHi);
+    updateGauge(tempGauge, tempLoHiTxt, tempC, tempLo, tempHi, 0);
   }
 
 
@@ -396,8 +414,8 @@ void testSensors()
   if (tdsValue < tdsLo && tdsValue >= 0) tdsLo = tdsValue;
   if (tdsValue > tdsHi) tdsHi = tdsValue;
   
-  if (tdsValue <= 0) updateGauge(tdsGauge, tdsLoHiTxt, -1, tdsLo, tdsHi);
-  else updateGauge(tdsGauge, tdsLoHiTxt, tdsValue, tdsLo, tdsHi);
+  if (tdsValue <= 0) updateGauge(tdsGauge, tdsLoHiTxt, -1, tdsLo, tdsHi, 0);
+  else updateGauge(tdsGauge, tdsLoHiTxt, tdsValue, tdsLo, tdsHi, 0);
 
 
   // * pH
@@ -405,8 +423,8 @@ void testSensors()
   if (phVal < phLo && phVal >= 0) phLo = phVal;
   if (phVal > phHi) phHi = phVal;
   
-  if (phVal <= 0) updateGauge(phGauge, phLoHiTxt, -1, phLo, phHi);
-  else updateGauge(phGauge, phLoHiTxt, phVal, phLo, phHi);
+  if (phVal <= 0) updateGauge(phGauge, phLoHiTxt, -1, phLo, phHi, 1);
+  else updateGauge(phGauge, phLoHiTxt, phVal, phLo, phHi, 1);
 
   
 }
@@ -492,18 +510,28 @@ void setTxtStyle(gslc_tsElemRef *pElemRef, gslc_tsColor colVal, int nFontId)
  * @param n: Value to set ring meter to
  * @param lo: Low value
  * @param hi: High value
+ * @param dbl: Whether to show the values as floating number (true) or integer (false)
  */
-void updateGauge(gslc_tsElemRef *pElemRef, gslc_tsElemRef *pSubElemRef, int n, int lo, int hi)
+void updateGauge(gslc_tsElemRef *pElemRef, gslc_tsElemRef *pSubElemRef, double n, double lo, double hi, bool dbl)
 {
 	char nStr[25], loHi[25];
-	sprintf(nStr, "%d", n);
-	sprintf(loHi, "%c%d %c%d", 25, lo, 24, hi);
+  if (dbl)
+  {
+    sprintf(nStr, "%.1lf", n);
+	  sprintf(loHi, "%c%.1lf %c%.1lf", 25, lo, 24, hi);
+  } 
+  else 
+  {
+    sprintf(nStr, "%.0lf", n);
+	  sprintf(loHi, "%c%.0lf %c%.0lf", 25, lo, 24, hi);
+  }
+  
 
 	gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, n);
 	gslc_ElemSetTxtStr(&m_gui, pElemRef, nStr);
 	gslc_ElemSetTxtStr(&m_gui, pSubElemRef, loHi);
 
-  if (n <= 0) gslc_ElemSetTxtStr(&m_gui, pElemRef, "-");
+  if (n < 0) gslc_ElemSetTxtStr(&m_gui, pElemRef, "-");
 }
 
 
@@ -513,9 +541,13 @@ void updateGauge(gslc_tsElemRef *pElemRef, gslc_tsElemRef *pSubElemRef, int n, i
  */
 void controlHeater()
 {
-
+  digitalWrite(RELAY_PIN, HIGH);
   // Update heater status label
-  if (gslc_ElemXCheckboxGetState(&m_gui, noHeaterCB)) gslc_ElemSetTxtStr(&m_gui, heaterStatTxt, "Heater is Disabled");
+  if (gslc_ElemXCheckboxGetState(&m_gui, noHeaterCB))
+  {
+    gslc_ElemSetTxtStr(&m_gui, heaterStatTxt, "Heater is Disabled");
+    digitalWrite(RELAY_PIN, LOW);
+  }
   else if (heaterOn) gslc_ElemSetTxtStr(&m_gui, heaterStatTxt, "Heater is Currently On");
   else gslc_ElemSetTxtStr(&m_gui, heaterStatTxt, "Heater is Currently Off");
   
@@ -560,7 +592,11 @@ void controlHeater()
     // Turn heater off
 		digitalWrite(RELAY_PIN, LOW);
     heaterOn = false;
-	}
+	} else { // Perfect Temperature, turn off
+    // Turn heater off
+		digitalWrite(RELAY_PIN, LOW);
+    heaterOn = false;
+  }
   
 }
 
@@ -830,7 +866,7 @@ void Graph(int dx, double x, double y, double gx, double gy, double w, double h,
 
 void logData()
 {
-  curHr = timeinfo.tm_min%24; // DEBUG: for now it logs every minute (for testing purposes) need to change to 'tm_hour' in final build
+  curHr = timeinfo.tm_hour%24; // DEBUG: for now it logs every minute (for testing purposes) need to change to 'tm_hour' in final build
 
   if (curHr != prevHr) // Update what's inside every 1 hour
 	{
@@ -922,15 +958,16 @@ void handleGraphUpdate() {
           Graph(x, i, y, gx, gy, gw, gh, 0, 23, 1, 10, 35, 5, "time of day", "temperature (\xf7""C)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK3, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
         }
       
-      } else if (dataLog.selectedSum == 1)
+      } 
+      else if (dataLog.selectedSum == 1)
       {
         // graph TDS
-        Graph(x, i, dataLog.tdsVal[x], gx, gy, gw, gh, 0, 23, 1, 10, 35, 5, "time of day", "TDS (ppm)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK3, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
+        Graph(x, i, dataLog.tdsVal[x], gx, gy, gw, gh, 0, 23, 1, 0, 1000, 200, "time of day", "TDS (ppm)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK3, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
       }
       else
       {
         // graph pH
-        Graph(x, i, dataLog.phVal[x], gx, gy, gw, gh, 0, 23, 1, 10, 35, 5, "time of day", "pH Level (pH)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK3, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
+        Graph(x, i, dataLog.phVal[x], gx, gy, gw, gh, 0, 23, 1, 0, 15, 3, "time of day", "pH Level (pH)", GSLC_COL_GRAY_DK3, GSLC_COL_GRAY_DK3, GSLC_COL_BLUE_LT4, GSLC_COL_WHITE, GSLC_COL_BLACK, redrawGraph);
       }
       
 
@@ -961,7 +998,7 @@ void handleDesiredTemp()
       gslc_ElemSetTxtStr(&m_gui, desiredTempElem, "65");
       usrTemp = 65;
     }
-
+    // Change it to Celsius
     usrTemp = tempSensor.toCelsius(usrTemp);
     
   }
@@ -980,6 +1017,23 @@ void handleDesiredTemp()
   }
 
   desiredTemp = usrTemp;
+}
+
+
+void handleWifiSetupBtn()
+{
+
+  Serial.print("Connecting to WiFi");
+  // Start connecting to the wifi
+  WiFi.begin(gslc_ElemGetTxtStr(&m_gui, ssidTxtInput), gslc_ElemGetTxtStr(&m_gui, pwdTxtInput));
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\n Connected!");
+  gslc_ElemSetTxtStr(&m_gui, wifiStatusTxt, "CONNECTED! Starting up...");
+  wifiConnected = true;
+
 }
 
 

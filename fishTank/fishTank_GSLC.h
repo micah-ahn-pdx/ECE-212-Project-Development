@@ -22,6 +22,7 @@
 //<Includes !Start!>
 // Include extended elements
 #include "elem/XCheckbox.h"
+#include "elem/XKeyPad_Alpha.h"
 #include "elem/XKeyPad_Num.h"
 #include "elem/XRingGauge.h"
 #include "elem/XTogglebtn.h"
@@ -51,22 +52,24 @@
 // ------------------------------------------------
 //<Enum !Start!>
 enum {E_PG_BASE,E_PG_MAIN,E_PG_POPUP_NOTIFY,E_PG_SUM,E_PG_STNG
-      ,E_PG_CALPH,E_POP_KEYPAD_NUM};
+      ,E_PG_CALPH,E_PG_SETUP,E_POP_KEYPAD_NUM,E_POP_KEYPAD_ALPHA};
 enum {E_DRAW_LINE_STNG1,E_DRAW_LINE_STNG2,E_ELEM_BOX2,E_ELEM_BOX3
       ,E_ELEM_BTN2,E_ELEM_BTN7,E_ELEM_BTN_CALPH_CLR,E_ELEM_BTN_CALPH_HI
       ,E_ELEM_BTN_CALPH_LO,E_ELEM_BTN_CALPH_MD,E_ELEM_BTN_HOME1
       ,E_ELEM_BTN_HOME2,E_ELEM_BTN_HOME3,E_ELEM_BTN_PHSUM
       ,E_ELEM_BTN_STNGS,E_ELEM_BTN_STNG_CALPH,E_ELEM_BTN_TDSSUM
-      ,E_ELEM_BTN_TEMPSUM,E_ELEM_CHECK_NOHEATER,E_ELEM_CLOCK_TXT
-      ,E_ELEM_NUMINPUT_TEMP,E_ELEM_PHGAUGE,E_ELEM_PHUNIT_TEXT
-      ,E_ELEM_TDSGAUGE,E_ELEM_TDSUNIT_TEXT,E_ELEM_TEAMNAME_TXT
-      ,E_ELEM_TEMPGAUGE,E_ELEM_TEMPUNIT_TEXT,E_ELEM_TEXT11
-      ,E_ELEM_TEXT14,E_ELEM_TEXT26,E_ELEM_TEXT27,E_ELEM_TEXT28
-      ,E_ELEM_TEXT29,E_ELEM_TEXT3,E_ELEM_TEXT30,E_ELEM_TEXT32
-      ,E_ELEM_TEXT33,E_ELEM_TEXT34,E_ELEM_TEXT35,E_ELEM_TEXT36
-      ,E_ELEM_TEXT38,E_ELEM_TEXT39,E_ELEM_TEXT40,E_ELEM_TEXT41
-      ,E_ELEM_TEXT42,E_ELEM_TEXT_ALERT_MSG,E_ELEM_TEXT_STNG_DESTEMP
-      ,E_ELEM_TITLE_TXT,E_ELEM_TOGGLE2,E_ELEM_KEYPAD_NUM};
+      ,E_ELEM_BTN_TEMPSUM,E_ELEM_BTN_WIFI_CONNECT,E_ELEM_CHECK_NOHEATER
+      ,E_ELEM_CLOCK_TXT,E_ELEM_NUMINPUT_TEMP,E_ELEM_PHGAUGE
+      ,E_ELEM_PHUNIT_TEXT,E_ELEM_TDSGAUGE,E_ELEM_TDSUNIT_TEXT
+      ,E_ELEM_TEAMNAME_TXT,E_ELEM_TEMPGAUGE,E_ELEM_TEMPUNIT_TEXT
+      ,E_ELEM_TEXT11,E_ELEM_TEXT14,E_ELEM_TEXT26,E_ELEM_TEXT27
+      ,E_ELEM_TEXT28,E_ELEM_TEXT29,E_ELEM_TEXT3,E_ELEM_TEXT30
+      ,E_ELEM_TEXT32,E_ELEM_TEXT33,E_ELEM_TEXT34,E_ELEM_TEXT35
+      ,E_ELEM_TEXT36,E_ELEM_TEXT38,E_ELEM_TEXT39,E_ELEM_TEXT40
+      ,E_ELEM_TEXT41,E_ELEM_TEXT42,E_ELEM_TEXT43,E_ELEM_TEXT44
+      ,E_ELEM_TEXT45,E_ELEM_TEXT46,E_ELEM_TEXTINPUT1,E_ELEM_TEXTINPUT2
+      ,E_ELEM_TEXT_ALERT_MSG,E_ELEM_TEXT_STNG_DESTEMP,E_ELEM_TITLE_TXT
+      ,E_ELEM_TOGGLE2,E_ELEM_KEYPAD_NUM,E_ELEM_KEYPAD_ALPHA};
 // Must use separate enum for fonts with MAX_FONT at end to use gslc_FontSet.
 enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 //<Enum !End!>
@@ -79,7 +82,7 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 // Define the maximum number of elements and pages
 // ------------------------------------------------
 //<ElementDefines !Start!>
-#define MAX_PAGE                7
+#define MAX_PAGE                9
 
 #define MAX_ELEM_PG_BASE 3 // # Elems total on page
 #define MAX_ELEM_PG_BASE_RAM MAX_ELEM_PG_BASE // # Elems in RAM
@@ -108,6 +111,9 @@ enum {E_BUILTIN10X16,E_BUILTIN15X24,E_BUILTIN5X8,MAX_FONT};
 
 #define MAX_ELEM_PG_CALPH 9 // # Elems total on page
 #define MAX_ELEM_PG_CALPH_RAM MAX_ELEM_PG_CALPH // # Elems in RAM
+
+#define MAX_ELEM_PG_SETUP 7 // # Elems total on page
+#define MAX_ELEM_PG_SETUP_RAM MAX_ELEM_PG_SETUP // # Elems in RAM
 //<ElementDefines !End!>
 
 // ------------------------------------------------
@@ -131,9 +137,14 @@ gslc_tsElem                     m_asPage3Elem[MAX_ELEM_PG_STNG_RAM];
 gslc_tsElemRef                  m_asPage3ElemRef[MAX_ELEM_PG_STNG];
 gslc_tsElem                     m_asPage4Elem[MAX_ELEM_PG_CALPH_RAM];
 gslc_tsElemRef                  m_asPage4ElemRef[MAX_ELEM_PG_CALPH];
+gslc_tsElem                     m_asPage5Elem[MAX_ELEM_PG_SETUP_RAM];
+gslc_tsElemRef                  m_asPage5ElemRef[MAX_ELEM_PG_SETUP];
 gslc_tsElem                     m_asKeypadNumElem[1];
 gslc_tsElemRef                  m_asKeypadNumElemRef[1];
+gslc_tsElem                     m_asKeypadAlphaElem[1];
+gslc_tsElemRef                  m_asKeypadAlphaElemRef[1];
 gslc_tsXKeyPad                  m_sKeyPadNum;
+gslc_tsXKeyPad                  m_sKeyPadAlpha;
 gslc_tsXRingGauge               m_sXRingGauge1;
 gslc_tsXRingGauge               m_sXRingGauge2;
 gslc_tsXRingGauge               m_sXRingGauge3;
@@ -163,7 +174,9 @@ extern gslc_tsElemRef* phGauge;
 extern gslc_tsElemRef* phLoHiTxt;
 extern gslc_tsElemRef* phSumBtn;
 extern gslc_tsElemRef* phUnitTxt;
+extern gslc_tsElemRef* pwdTxtInput;
 extern gslc_tsElemRef* settingsTempUnitTxt;
+extern gslc_tsElemRef* ssidTxtInput;
 extern gslc_tsElemRef* statusbarText;
 extern gslc_tsElemRef* tdsGauge;
 extern gslc_tsElemRef* tdsLoHiTxt;
@@ -174,7 +187,10 @@ extern gslc_tsElemRef* tempLoHiTxt;
 extern gslc_tsElemRef* tempSumBtn;
 extern gslc_tsElemRef* tempUnitToggle;
 extern gslc_tsElemRef* tempUnitTxt;
+extern gslc_tsElemRef* wifiConnectBtn;
+extern gslc_tsElemRef* wifiStatusTxt;
 extern gslc_tsElemRef* m_pElemKeyPadNum;
+extern gslc_tsElemRef* m_pElemKeyPadAlpha;
 //<Extern_References !End!>
 
 // Define debug message function
@@ -217,7 +233,9 @@ void InitGUIslice_gen()
   gslc_PageAdd(&m_gui,E_PG_SUM,m_asPage2Elem,MAX_ELEM_PG_SUM_RAM,m_asPage2ElemRef,MAX_ELEM_PG_SUM);
   gslc_PageAdd(&m_gui,E_PG_STNG,m_asPage3Elem,MAX_ELEM_PG_STNG_RAM,m_asPage3ElemRef,MAX_ELEM_PG_STNG);
   gslc_PageAdd(&m_gui,E_PG_CALPH,m_asPage4Elem,MAX_ELEM_PG_CALPH_RAM,m_asPage4ElemRef,MAX_ELEM_PG_CALPH);
+  gslc_PageAdd(&m_gui,E_PG_SETUP,m_asPage5Elem,MAX_ELEM_PG_SETUP_RAM,m_asPage5ElemRef,MAX_ELEM_PG_SETUP);
   gslc_PageAdd(&m_gui,E_POP_KEYPAD_NUM,m_asKeypadNumElem,1,m_asKeypadNumElemRef,1);  // KeyPad
+  gslc_PageAdd(&m_gui,E_POP_KEYPAD_ALPHA,m_asKeypadAlphaElem,1,m_asKeypadAlphaElemRef,1);  // KeyPad
 
   // Now mark E_PG_BASE as a "base" page which means that it's elements
   // are always visible. This is useful for common page elements.
@@ -236,7 +254,7 @@ void InitGUIslice_gen()
   
   
   // Create E_ELEM_CLOCK_TXT runtime modifiable text
-  static char m_sDisplayText18[31] = "Clock";
+  static char m_sDisplayText18[31] = "-";
   pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_CLOCK_TXT,E_PG_BASE,(gslc_tsRect){149,10,181,10},
     (char*)m_sDisplayText18,31,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
@@ -252,9 +270,10 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEAMNAME_TXT text label
   pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEAMNAME_TXT,E_PG_BASE,(gslc_tsRect){385,10,85,10},
-    (char*)"Fish Tank v0.4",0,E_BUILTIN5X8);
+    (char*)"Fish Tank v1.0",0,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_RIGHT);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  gslc_ElemSetTxtEnc(&m_gui,pElemRef,GSLC_TXT_ENC_UTF8);
 
   // -----------------------------------
   // PAGE: E_PG_MAIN
@@ -310,7 +329,7 @@ void InitGUIslice_gen()
   // Create ring gauge E_ELEM_PHGAUGE 
   static char m_sRingText2[11] = "";
   pElemRef = gslc_ElemXRingGaugeCreate(&m_gui,E_ELEM_PHGAUGE,E_PG_MAIN,&m_sXRingGauge2,
-          (gslc_tsRect){323,70,150,150},
+          (gslc_tsRect){322,70,150,150},
           (char*)m_sRingText2,11,E_BUILTIN5X8);
   gslc_ElemXRingGaugeSetValRange(&m_gui, pElemRef, 0, 100);
   gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, 80); // Set initial value
@@ -322,7 +341,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_PHUNIT_TEXT modifiable text using flash API
   static char m_sDisplayText10[6] = "pH";
-  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_PHUNIT_TEXT,E_PG_MAIN,382,169,31,10,
+  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_PHUNIT_TEXT,E_PG_MAIN,381,169,31,10,
     m_sDisplayText10,6,&m_asFont[E_BUILTIN5X8],
     GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
     false,true,false,false,NULL,NULL,NULL,NULL);
@@ -330,7 +349,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEXT11 runtime modifiable text
   static char m_sDisplayText11[16] = "lo/hi";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT11,E_PG_MAIN,(gslc_tsRect){352,114,91,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT11,E_PG_MAIN,(gslc_tsRect){351,114,91,10},
     (char*)m_sDisplayText11,16,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4);
@@ -339,7 +358,7 @@ void InitGUIslice_gen()
   // Create ring gauge E_ELEM_TDSGAUGE 
   static char m_sRingText3[11] = "";
   pElemRef = gslc_ElemXRingGaugeCreate(&m_gui,E_ELEM_TDSGAUGE,E_PG_MAIN,&m_sXRingGauge3,
-          (gslc_tsRect){7,70,150,150},
+          (gslc_tsRect){8,70,150,150},
           (char*)m_sRingText3,11,E_BUILTIN5X8);
   gslc_ElemXRingGaugeSetValRange(&m_gui, pElemRef, 0, 100);
   gslc_ElemXRingGaugeSetVal(&m_gui, pElemRef, 80); // Set initial value
@@ -351,7 +370,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TDSUNIT_TEXT modifiable text using flash API
   static char m_sDisplayText13[6] = "ppm";
-  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_TDSUNIT_TEXT,E_PG_MAIN,66,169,31,10,
+  gslc_ElemCreateTxt_P_R_ext(&m_gui,E_ELEM_TDSUNIT_TEXT,E_PG_MAIN,67,169,31,10,
     m_sDisplayText13,6,&m_asFont[E_BUILTIN5X8],
     GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_GRAY,GSLC_COL_BLACK,GSLC_ALIGN_MID_MID,0,0,
     false,true,false,false,NULL,NULL,NULL,NULL);
@@ -359,7 +378,7 @@ void InitGUIslice_gen()
   
   // Create E_ELEM_TEXT14 runtime modifiable text
   static char m_sDisplayText14[16] = "lo/hi";
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT14,E_PG_MAIN,(gslc_tsRect){36,114,91,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT14,E_PG_MAIN,(gslc_tsRect){37,114,91,10},
     (char*)m_sDisplayText14,16,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4);
@@ -372,13 +391,13 @@ void InitGUIslice_gen()
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   
   // Create E_ELEM_TEXT34 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT34,E_PG_MAIN,(gslc_tsRect){72,45,19,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT34,E_PG_MAIN,(gslc_tsRect){73,45,19,10},
     (char*)"TDS",0,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
   
   // Create E_ELEM_TEXT36 text label
-  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT36,E_PG_MAIN,(gslc_tsRect){391,45,13,10},
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT36,E_PG_MAIN,(gslc_tsRect){390,45,13,10},
     (char*)"pH",0,E_BUILTIN5X8);
   gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
   gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
@@ -626,6 +645,66 @@ void InitGUIslice_gen()
   calpHStatTxt = pElemRef;
 
   // -----------------------------------
+  // PAGE: E_PG_SETUP
+  
+  
+  // Create E_ELEM_TEXTINPUT1 text input field
+  static char m_sInputText1[21] = "M XI";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXTINPUT1,E_PG_SETUP,(gslc_tsRect){150,90,251,40},
+    (char*)m_sInputText1,21,E_BUILTIN10X16);
+  gslc_ElemSetTxtMargin(&m_gui,pElemRef,5);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,true);
+  gslc_ElemSetClickEn(&m_gui, pElemRef, true);
+  gslc_ElemSetTouchFunc(&m_gui, pElemRef, &CbBtnCommon);
+  ssidTxtInput = pElemRef;
+  
+  // Create E_ELEM_TEXT43 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT43,E_PG_SETUP,(gslc_tsRect){80,100,61,18},
+    (char*)"SSID:",0,E_BUILTIN10X16);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXTINPUT2 text input field
+  static char m_sInputText2[21] = "Password";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXTINPUT2,E_PG_SETUP,(gslc_tsRect){150,149,251,40},
+    (char*)m_sInputText2,21,E_BUILTIN10X16);
+  gslc_ElemSetTxtMargin(&m_gui,pElemRef,5);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,true);
+  gslc_ElemSetClickEn(&m_gui, pElemRef, true);
+  gslc_ElemSetTouchFunc(&m_gui, pElemRef, &CbBtnCommon);
+  pwdTxtInput = pElemRef;
+  
+  // Create E_ELEM_TEXT44 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT44,E_PG_SETUP,(gslc_tsRect){90,160,49,18},
+    (char*)"PWD:",0,E_BUILTIN10X16);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT45 text label
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT45,E_PG_SETUP,(gslc_tsRect){179,40,121,18},
+    (char*)"WiFi Setup",0,E_BUILTIN10X16);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  
+  // Create E_ELEM_TEXT46 runtime modifiable text
+  static char m_sDisplayText46[71] = " ";
+  pElemRef = gslc_ElemCreateTxt(&m_gui,E_ELEM_TEXT46,E_PG_SETUP,(gslc_tsRect){29,220,421,10},
+    (char*)m_sDisplayText46,71,E_BUILTIN5X8);
+  gslc_ElemSetTxtAlign(&m_gui,pElemRef,GSLC_ALIGN_MID_MID);
+  gslc_ElemSetTxtCol(&m_gui,pElemRef,GSLC_COL_WHITE);
+  wifiStatusTxt = pElemRef;
+  
+  // create E_ELEM_BTN_WIFI_CONNECT button with text label
+  pElemRef = gslc_ElemCreateBtnTxt(&m_gui,E_ELEM_BTN_WIFI_CONNECT,E_PG_SETUP,
+    (gslc_tsRect){10,250,460,60},(char*)"Connect",0,E_BUILTIN10X16,&CbBtnCommon);
+  gslc_ElemSetCol(&m_gui,pElemRef,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT4,GSLC_COL_BLUE_LT3);
+  gslc_ElemSetRoundEn(&m_gui, pElemRef, true);
+  gslc_ElemSetFrameEn(&m_gui,pElemRef,false);
+  wifiConnectBtn = pElemRef;
+
+  // -----------------------------------
   // PAGE: E_POP_KEYPAD_NUM
   
   static gslc_tsXKeyPadCfg_Num sCfg;
@@ -635,6 +714,15 @@ void InitGUIslice_gen()
   m_pElemKeyPadNum = gslc_ElemXKeyPadCreate_Num(&m_gui, E_ELEM_KEYPAD_NUM, E_POP_KEYPAD_NUM,
     &m_sKeyPadNum, 65, 80, E_BUILTIN5X8, &sCfg);
   gslc_ElemXKeyPadValSetCb(&m_gui, m_pElemKeyPadNum, &CbKeypad);
+
+  // -----------------------------------
+  // PAGE: E_POP_KEYPAD_ALPHA
+  
+  static gslc_tsXKeyPadCfg_Alpha sCfgTx;
+  sCfgTx = gslc_ElemXKeyPadCfgInit_Alpha();
+  m_pElemKeyPadAlpha = gslc_ElemXKeyPadCreate_Alpha(&m_gui, E_ELEM_KEYPAD_ALPHA, E_POP_KEYPAD_ALPHA,
+    &m_sKeyPadAlpha, 10, 40, E_BUILTIN5X8, &sCfgTx);
+  gslc_ElemXKeyPadValSetCb(&m_gui, m_pElemKeyPadAlpha, &CbKeypad);
 //<InitGUI !End!>
 
 //<Startup !Start!>
